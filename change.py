@@ -1,5 +1,8 @@
 from math import cos, sin, pi, atan2 ,asin
 # 欧拉角(x, y, z)转换为四元数(q0, q1, q2, q3)
+
+
+
 # x , y , z 单位为角度
 x, y, z  = 0 ,0 ,90
 x, y, z  = x*pi/180 ,y*pi/180 ,z*pi/180
