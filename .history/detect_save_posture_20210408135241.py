@@ -1,10 +1,11 @@
 import os
 import sys
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+print(sys.path)
 import random
 import pyrealsense2 as rs
 import numpy as np
-import cv2
+from cv2 import cv2
 import time
 import matplotlib.pyplot as plt
 import colorsys
@@ -35,6 +36,9 @@ def MaskRCNN():
     # from mrcnn import utils
     import mrcnn.model as modellib
     # from mrcnn import visualize
+
+    # sys.path.append(os.path.join(ROOT_DIR, "src/coco/"))  # To find local version
+    # import coco
 
     class ShapesConfig(Config):
         NAME = "shapes"

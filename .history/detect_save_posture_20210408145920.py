@@ -36,6 +36,9 @@ def MaskRCNN():
     import mrcnn.model as modellib
     # from mrcnn import visualize
 
+    # sys.path.append(os.path.join(ROOT_DIR, "src/coco/"))  # To find local version
+    # import coco
+
     class ShapesConfig(Config):
         NAME = "shapes"
         GPU_COUNT = 1

@@ -59,7 +59,7 @@ def MaskRCNN():
     MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 
     # Local path to trained weights file
-    COCO_MODEL_PATH = '/home/jiang/Grasp/mask_rcnn_shapes_0152.h5'
+    COCO_MODEL_PATH = '/home/jiang/Grasp/mask_rcnn_shapes_0200.h5'
 
     class InferenceConfig(ShapesConfig):
         GPU_COUNT = 1
@@ -176,8 +176,8 @@ def detect_objects_in_image(image, model):
         obj_y = (target_y_in_pixel - 150) * y_dist + p_0[1]
 
         # print(class_names[index], '(x,y):', obj_x, obj_y)
-        target_object_dict[class_names[index]] = [obj_x / 1000, obj_y / 1000, theta, mask_points]
-
+        #target_object_dict[class_names[index]] = [obj_x / 1000, obj_y / 1000, theta, mask_points]
+        target_object_dict[class_names[index]] = [mask_points]
     return target_object_dict
 
 
