@@ -249,12 +249,10 @@ def line_set(points):
     return medium_point, eigenvectors
 
 
-def go_to_dot(dot):
+def go_to_dot(move_dot):
 
     GRASP_DIR = os.path.join(ROOT_DIR, "UR5-control-with-RG2")
-    sys.path.append(GRASP_DIR)
     import test_main as grasp
-    move_dot = np.append(dot,1.0)
 
     tf = np.array([[0.13747795, -0.98960085, -0.04230801, 0.03982764],
                    [-0.92374168, -0.14351067, 0.35511406, -0.83160342],
@@ -327,10 +325,9 @@ def main():
 
         object_dict = save_objects_point_cloud(vtx, rgb_image, target_objects_dict)
     
-    if 'eggplant' in object_dict:
-        eggplant_dot = object_dict['eggplant'][0]
-        print(eggplant_dot)
-        go_to_dot(eggplant_dot)
+    eggplant_dot = object_dict['eggplant'][0]
+    print(eggplant_dot)
+    Go_to_dot(eggplant_dot)
     # print(points[:3])
 
 

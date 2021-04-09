@@ -1,7 +1,7 @@
 import numpy as np
 import test_main as grasp
 
-carrot_dot = np.asarray([ 0.10444525, 0.1695752 , 0.73200005, 1.])
+carrot_dot = np.asarray([-0.05177925, -0.00108026,  0.67600006, 1.])
 
 tf = np.array(
     [[0.13747795, -0.98960085, -0.04230801, 0.03982764],

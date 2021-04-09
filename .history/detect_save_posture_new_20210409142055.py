@@ -69,7 +69,7 @@ def MaskRCNN():
     config = InferenceConfig()
 
     # Create model object in inference mode.
-    model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
+     model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
     # Load weights trained on MS-COCO
     model.load_weights(COCO_MODEL_PATH, by_name=True)
@@ -137,10 +137,8 @@ def detect_objects_in_image(image, model):
     RESULT_SAVE_PATH = "/home/jiang/Grasp/result"
     # !!! change the function to choose which object to show in the results
     save_path_name = os.path.join(RESULT_SAVE_PATH, 'img.jpg')
-
-    # 显示掩码图片
-    # masked_image = visualize.display_instances(save_path_name, image, r['rois'], r['masks'], r['class_ids'],
-    #                                            class_names, r['scores'], colors=COLOR)
+    masked_image = visualize.display_instances(save_path_name, image, r['rois'], r['masks'], r['class_ids'],
+                                               class_names, r['scores'], colors=COLOR)
 
     print(r['masks'].shape)
     target_object_dict = {}
@@ -249,12 +247,10 @@ def line_set(points):
     return medium_point, eigenvectors
 
 
-def go_to_dot(dot):
+def grasp(move_dot):
 
     GRASP_DIR = os.path.join(ROOT_DIR, "UR5-control-with-RG2")
-    sys.path.append(GRASP_DIR)
     import test_main as grasp
-    move_dot = np.append(dot,1.0)
 
     tf = np.array([[0.13747795, -0.98960085, -0.04230801, 0.03982764],
                    [-0.92374168, -0.14351067, 0.35511406, -0.83160342],
@@ -317,20 +313,15 @@ def main():
         rgb_image = np.asanyarray(color_frame.get_data())
         rgb_image[:, :, [0, 2]] = rgb_image[:, :, [2, 0]]
         # print(rgb_image.shape)
-
-        # 显示rgb图片
-        # plt.imshow(rgb_image)
-        
+        plt.imshow(rgb_image)
         # plt.pause(1)  # pause 1 second
         # plt.clf()
         target_objects_dict = detect_objects_in_image(img_color, model)
 
         object_dict = save_objects_point_cloud(vtx, rgb_image, target_objects_dict)
     
-    if 'eggplant' in object_dict:
-        eggplant_dot = object_dict['eggplant'][0]
-        print(eggplant_dot)
-        go_to_dot(eggplant_dot)
+    eggplant_dot = object_dict['eggplant'][0]
+    print(eggplant_dot)
     # print(points[:3])
 
 
