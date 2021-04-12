@@ -21,9 +21,9 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.6
 session = tf.Session(config=config)
 KTF.set_session(session)
 
-
 ROOT_DIR = os.path.abspath("/home/jiang/Grasp")
 sys.path.append(ROOT_DIR)
+
 
 def MaskRCNN():
     # Root directory of the project
@@ -35,6 +35,7 @@ def MaskRCNN():
     from mrcnn.config import Config
     # from mrcnn import utils
     import mrcnn.model as modellib
+
     # from mrcnn import visualize
 
     class ShapesConfig(Config):
@@ -48,7 +49,8 @@ def MaskRCNN():
         IMAGE_MIN_DIM = 480
         IMAGE_MAX_DIM = 640
 
-        RPN_ANCHOR_SCALES = (8 * 4, 16 * 4, 32 * 4, 64 * 4, 128 * 4)  # anchor side in pixels
+        RPN_ANCHOR_SCALES = (8 * 4, 16 * 4, 32 * 4, 64 * 4, 128 * 4
+                             )  # anchor side in pixels
 
         TRAIN_ROIS_PER_IMAGE = 64
 
@@ -69,7 +71,9 @@ def MaskRCNN():
     config = InferenceConfig()
 
     # Create model object in inference mode.
-    model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
+    model = modellib.MaskRCNN(mode="inference",
+                              model_dir=MODEL_DIR,
+                              config=config)
 
     # Load weights trained on MS-COCO
     model.load_weights(COCO_MODEL_PATH, by_name=True)
@@ -113,9 +117,13 @@ def detect_objects_in_image(image, model):
 
     from mrcnn import visualize
 
-    class_names = ['BG', "red_pepper", 'green_pepper', "carrot", "turnip", "eggplant", "baozi", "croissant", "cupcake",
-                   "ginger", "cake", "corn", "grape", "banana", "kiwi", "lemon", "pear", "apple", "carambola", "train",
-                   "detergent", "plate_w", "plate_g", "paper_box", "plastic_box", "cup_", "mouse", "hand", 'watermelon']
+    class_names = [
+        'BG', "red_pepper", 'green_pepper', "carrot", "turnip", "eggplant",
+        "baozi", "croissant", "cupcake", "ginger", "cake", "corn", "grape",
+        "banana", "kiwi", "lemon", "pear", "apple", "carambola", "train",
+        "detergent", "plate_w", "plate_g", "paper_box", "plastic_box", "cup_",
+        "mouse", "hand", 'watermelon'
+    ]
 
     # graspable_class = ['red_pepper', 'green_pepper', 'carrot', 'turnip', 'eggplant',
     #                    'baozi', 'croissant', 'cupcake', 'ginger', 'cake', 'corn', 'grape',
@@ -127,7 +135,8 @@ def detect_objects_in_image(image, model):
     s_time = time.time()
     results = model.detect([image], verbose=1)
     e_time = time.time()
-    print('mask rcnn using : ', int(round(e_time * 1000)) - int(round(s_time * 1000)))
+    print('mask rcnn using : ',
+          int(round(e_time * 1000)) - int(round(s_time * 1000)))
     # Visualize results
     r = results[0]
     global __k
@@ -144,7 +153,9 @@ def detect_objects_in_image(image, model):
 
     print(r['masks'].shape)
     target_object_dict = {}
-    for score, index, cood, index_i in zip(r['scores'], r['class_ids'], r['rois'], range(len(r['class_ids']))):
+    for score, index, cood, index_i in zip(r['scores'],
+                                           r['class_ids'], r['rois'],
+                                           range(len(r['class_ids']))):
         mask_points = []
         mask = r['masks'][:, :, index_i]
         print(class_names[index])
@@ -160,7 +171,8 @@ def detect_objects_in_image(image, model):
 
         center_point = mask_points.mean(axis=0, keepdims=True)
 
-        tan_theta = (rec[rec.shape[0] - 1, 0] - rec[0, 0]) / (rec[rec.shape[0] - 1, 1] - rec[0, 1])
+        tan_theta = (rec[rec.shape[0] - 1, 0] -
+                     rec[0, 0]) / (rec[rec.shape[0] - 1, 1] - rec[0, 1])
         theta = -np.arctan(tan_theta)
         # print('pca theta : ', theta / np.pi * 180)
         # print('mask center point : ', center_point)
@@ -184,7 +196,8 @@ def detect_objects_in_image(image, model):
     return target_object_dict
 
 
-def save_objects_point_cloud(total_point_cloud, color_img, target_objects_dict):
+def save_objects_point_cloud(total_point_cloud, color_img,
+                             target_objects_dict):
     np.save('full_point_cloud_test', total_point_cloud)
     np.save('full_color', color_img)
     object_dict = {}
@@ -193,13 +206,17 @@ def save_objects_point_cloud(total_point_cloud, color_img, target_objects_dict):
         object_pc = np.zeros((mask.shape[0], 3), dtype=float)
         object_color = np.zeros((mask.shape[0], 3), dtype=np.uint8)
         for point_index in range(mask.shape[0]):
-            object_pc[point_index] = list(total_point_cloud[mask[point_index][0]][mask[point_index][1]][0])
+            object_pc[point_index] = list(total_point_cloud[
+                mask[point_index][0]][mask[point_index][1]][0])
             # print(object_pc[point_index])
             # input('>>>>>>>>>>>>>>>>>>>>>>>>>')
-            object_color[point_index] = list(color_img[mask[point_index][0]][mask[point_index][1]])
+            object_color[point_index] = list(
+                color_img[mask[point_index][0]][mask[point_index][1]])
         object_both = np.hstack((object_pc, object_color / 255))
         medium_points, eigenvectors = line_set(object_both)
-        object_dict[name] = [medium_points, eigenvectors[:, 0], eigenvectors[:, 1], object_both]
+        object_dict[name] = [
+            medium_points, eigenvectors[:, 0], eigenvectors[:, 1], object_both
+        ]
         np.save(name + '_pc', object_pc)
         np.save(name + 'color', object_color)
     print(object_dict)
@@ -254,7 +271,7 @@ def go_to_dot(dot):
     GRASP_DIR = os.path.join(ROOT_DIR, "UR5-control-with-RG2")
     sys.path.append(GRASP_DIR)
     import test_main as grasp
-    move_dot = np.append(dot,1.0)
+    move_dot = np.append(dot, 1.0)
 
     tf = np.array([[0.13747795, -0.98960085, -0.04230801, 0.03982764],
                    [-0.92374168, -0.14351067, 0.35511406, -0.83160342],
@@ -295,7 +312,6 @@ def main():
         color = frames.get_color_frame()
     print('Camera heating over.')
 
-
     for i in range(1):
         print(f'----------第{i+1}张照片-----------')
         frames = pipeline.wait_for_frames()
@@ -320,18 +336,28 @@ def main():
 
         # 显示rgb图片
         # plt.imshow(rgb_image)
-        
+
         # plt.pause(1)  # pause 1 second
         # plt.clf()
         target_objects_dict = detect_objects_in_image(img_color, model)
 
-        object_dict = save_objects_point_cloud(vtx, rgb_image, target_objects_dict)
-    
-    if 'eggplant' in object_dict:
-        eggplant_dot = object_dict['eggplant'][0]
-        print(eggplant_dot)
-        go_to_dot(eggplant_dot)
+        object_dict = save_objects_point_cloud(vtx, rgb_image,
+                                               target_objects_dict)
+                                               for item in test_object:
+        if 'eggplant' in object_dict:
+            item_dot = object_dict['eggplant'][0]
+            print(item_dot)
+            go_to_dot(eggplant_dot)
+
+'''
+    test_object = ['eggplant', 'carrot', 'grape']
+    for item in test_object:
+        if item in object_dict:
+            item_dot = object_dict[item][0]
+            print(item_dot)
+            go_to_dot(item_dot)
     # print(points[:3])
+    '''
 
 
 if __name__ == "__main__":
