@@ -2,18 +2,21 @@ import os
 import sys
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import random
-import pyrealsense2 as rs
 import numpy as np
+import pyrealsense2 as rs
 import cv2
-import time
-import matplotlib.pyplot as plt
-import colorsys
-from pandas import DataFrame
-import open3d as o3d
 
-import tensorflow as tf
+
+import random
+
+import colorsys
+import time
+
 import keras.backend.tensorflow_backend as KTF
-from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+import open3d as o3d
+import tensorflow as tf
+from pandas import DataFrame
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -23,11 +26,6 @@ session = tf.Session(config=config)
 KTF.set_session(session)
 
 ROOT_DIR = os.path.abspath("/home/jiang/Grasp")
-sys.path.append(ROOT_DIR)
-
-GRASP_DIR = os.path.join(ROOT_DIR, "UR5-control-with-RG2")
-sys.path.append(GRASP_DIR)
-import test_main as grasp
 
 
 def MaskRCNN():
@@ -35,13 +33,16 @@ def MaskRCNN():
     # ROOT_DIR = os.path.abspath("/home/jiang/Grasp")
 
     # Import Mask RCNN
-    # sys.path.append(ROOT_DIR)  # To find local version of the library
+    sys.path.append(ROOT_DIR)  # To find local version of the library
     # print(sys.path)
-    from mrcnn.config import Config
     # from mrcnn import utils
     import mrcnn.model as modellib
+    from mrcnn.config import Config
 
     # from mrcnn import visualize
+
+    # sys.path.append(os.path.join(ROOT_DIR, "src/coco/"))  # To find local version
+    # import coco
 
     class ShapesConfig(Config):
         NAME = "shapes"
@@ -49,7 +50,7 @@ def MaskRCNN():
         IMAGES_PER_GPU = 1
 
         # Number of classes (including background)
-        NUM_CLASSES = 1 + 28  # background + 28 shapes
+        NUM_CLASSES = 1 + 22  # background + 28 shapes
 
         IMAGE_MIN_DIM = 480
         IMAGE_MAX_DIM = 640
@@ -67,7 +68,7 @@ def MaskRCNN():
     MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 
     # Local path to trained weights file
-    COCO_MODEL_PATH = '/home/jiang/Grasp/mask_rcnn_shapes_0200.h5'
+    COCO_MODEL_PATH = '/home/jiang/Grasp/mask_rcnn_shapes_0100.h5'
 
     class InferenceConfig(ShapesConfig):
         GPU_COUNT = 1
@@ -85,7 +86,9 @@ def MaskRCNN():
 
     return model
 
+
 __k = 0
+
 
 def detect_objects_in_image(image, model):
     # # choose your color
@@ -98,7 +101,7 @@ def detect_objects_in_image(image, model):
     # ROOT_DIR = os.path.abspath("/home/jiang/Grasp")
 
     # Import Mask RCNN
-    # sys.path.append(ROOT_DIR)  # To find local version of the library
+    sys.path.append(ROOT_DIR)  # To find local version of the library
 
     from mrcnn import visualize
 
@@ -109,11 +112,6 @@ def detect_objects_in_image(image, model):
         "detergent", "plate_w", "plate_g", "paper_box", "plastic_box", "cup_",
         "mouse", "hand", 'watermelon'
     ]
-
-    # graspable_class = ['red_pepper', 'green_pepper', 'carrot', 'turnip', 'eggplant',
-    #                    'baozi', 'croissant', 'cupcake', 'ginger', 'cake', 'corn', 'grape',
-    #                    'banana', 'kiwi', 'lemon', 'pear', 'apple', 'carambola',
-    #                    'train', 'detergent', "mouse", 'watermelon', 'cup_']
 
     image = image[..., ::-1]
     # Run detection
@@ -129,12 +127,17 @@ def detect_objects_in_image(image, model):
     cv2.imwrite('/home/jiang/Grasp/result/res' + str(__k) + '.jpg', save_image)
     __k += 1
     RESULT_SAVE_PATH = "/home/jiang/Grasp/result"
+
     # !!! change the function to choose which object to show in the results
     save_path_name = os.path.join(RESULT_SAVE_PATH, 'img.jpg')
-
-    # 显示掩码图片
-    # masked_image = visualize.display_instances(save_path_name, image, r['rois'], r['masks'], r['class_ids'],
-    #                                            class_names, r['scores'], colors=COLOR)
+    masked_image = visualize.display_instances(save_path_name,
+                                               image,
+                                               r['rois'],
+                                               r['masks'],
+                                               r['class_ids'],
+                                               class_names,
+                                               r['scores'],
+                                               colors=COLOR)
 
     print(r['masks'].shape)
     target_object_dict = {}
@@ -152,7 +155,34 @@ def detect_objects_in_image(image, model):
         mask_points = np.array(mask_points)
         if mask_points.shape[0] < 1500:
             continue
+        '''
+        lowd, rec = PCA(mask_points)
+
+        center_point = mask_points.mean(axis=0, keepdims=True)
+
+        tan_theta = (rec[rec.shape[0] - 1, 0] -
+                     rec[0, 0]) / (rec[rec.shape[0] - 1, 1] - rec[0, 1])
+        theta = -np.arctan(tan_theta)
+        # print('pca theta : ', theta / np.pi * 180)
+        # print('mask center point : ', center_point)
+        # np.save(class_names[index]+'_mask.npy', mask_points)
+        target_x_in_pixel = center_point[0][0]
+        target_y_in_pixel = center_point[0][1]
+        # print('target in image (use center point) :', target_x_in_pixel, target_y_in_pixel)
+        p_0 = np.array([-33.54, -767.63])
+        p_1 = np.array([-26.01, -447.32])
+        p_2 = np.array([293.13, -449.37])
+
+        x_dist = (p_1[1] - p_0[1]) / 300
+        y_dist = (p_2[0] - p_1[0]) / 300
+
+        obj_x = (target_x_in_pixel - 150) * x_dist + p_0[0]
+        obj_y = (target_y_in_pixel - 150) * y_dist + p_0[1]
+
+        # print(class_names[index], '(x,y):', obj_x, obj_y)
+        '''
         target_object_dict[class_names[index]] = [mask_points]
+
     return target_object_dict
 
 
@@ -173,35 +203,17 @@ def save_objects_point_cloud(total_point_cloud, color_img,
             object_color[point_index] = list(
                 color_img[mask[point_index][0]][mask[point_index][1]])
         object_both = np.hstack((object_pc, object_color / 255))
-        pca = PCA(n_components=2)
-        pca.fit(object_pc)
-        medium_points = np.array(object_pc.median())
-        eigenvectors = pca.components_
-        a = eigenvectors[0]
-        b = eigenvectors[1]
-        c = np.cross(a,b)
-        rm = np.array([c, b, -a])
-        
-            object_dict[name] = [
+        medium_points, eigenvectors = line_set(object_both)
+        object_dict[name] = [
             medium_points, eigenvectors[:, 0], eigenvectors[:, 1], object_both
         ]
         np.save(name + '_pc', object_pc)
         np.save(name + '_color', object_color)
-    # print(object_dict)
+    print(object_dict)
 
-    return object_dict
+    # return object_both
 
-def go_to_dot(dot):
 
-    move_dot = np.append(dot, 1.0)
-
-    tf = np.loadtxt('tf.txt')
-    new_dot = tf.dot(move_dot)
-    current_tcp = grasp.get_current_tcp()
-    print(f"current_tcp:{current_tcp}")
-    move_tcp = np.hstack((new_dot[:3], current_tcp[3:]))
-    print(f"move_tcp:{move_tcp}")
-    grasp.move_to_tcp(move_tcp)
 
 def main():
     # input('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
@@ -229,7 +241,7 @@ def main():
         color = frames.get_color_frame()
     print('Camera heating over.')
 
-    for i in range(2):
+    for i in range(100):
         print(f'----------第{i+1}张照片-----------')
         frames = pipeline.wait_for_frames()
         frames = align.process(frames)
@@ -248,29 +260,17 @@ def main():
         frames = pipeline.wait_for_frames()
         color_frame = frames.get_color_frame()
         rgb_image = np.asanyarray(color_frame.get_data())
-        # 改变rgb顺序
         rgb_image[:, :, [0, 2]] = rgb_image[:, :, [2, 0]]
         # print(rgb_image.shape)
-
-        # 显示rgb图片
         # plt.imshow(rgb_image)
-
         # plt.pause(1)  # pause 1 second
         # plt.clf()
         target_objects_dict = detect_objects_in_image(img_color, model)
 
-        object_dict = save_objects_point_cloud(vtx, rgb_image,
-                                               target_objects_dict)
-        
-        test_object = ['carrot', 'croissant']
-        for item in test_object:
-            if item in object_dict:
-                item_dot = object_dict[item][0]
-                print(item_dot)
-                go_to_dot(item_dot)
-        time.sleep(3)
+        save_objects_point_cloud(vtx, rgb_image, target_objects_dict)
 
-    grasp.go_home()
+    # print(points[:3])
+
 
 if __name__ == "__main__":
     main()

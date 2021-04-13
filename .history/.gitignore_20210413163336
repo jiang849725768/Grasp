@@ -2,4 +2,3 @@
 *.h5
 # 忽略numpy数组
 *.npy
-useless.py
