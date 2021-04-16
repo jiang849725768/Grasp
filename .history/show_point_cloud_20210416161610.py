@@ -24,7 +24,7 @@ def line_show(item_pc, item_color):
     feature_vector = pca.components_
 
     fv1 = np.array(feature_vector[0])
-    fv2 = -np.array(feature_vector[1])
+    fv2 = np.array(feature_vector[1])
     fv3 = np.cross(fv1, fv2)
 
     print(fv1.dot(fv2.T))
@@ -48,8 +48,8 @@ def line_show(item_pc, item_color):
     line_set = o3d.geometry.LineSet(points=o3d.utility.Vector3dVector(point),
                                     lines=o3d.utility.Vector2iVector(lines))
     line_set.colors = o3d.utility.Vector3dVector(colors)
+    pcd = o3d.io.read_point_cloud('temp.txt', format='xyzrgb')
 
-    # pcd = o3d.io.read_point_cloud('temp.txt', format='xyzrgb')
     # o3d.visualization.draw_geometries([pcd, line_set])
 
     return medium_point, np.array([fv1, fv2, fv3])
@@ -68,9 +68,9 @@ def main():
     new_item_pc = np.delete(((tf_matrix.dot(item_pc.T)).T), 3, axis=1)
 
     medium_point, feature_vector = line_show(new_item_pc, item_color)
-    rotation_matrix = feature_vector[[2, 0, 1], :]
-    rotation_vector = rm2rv(rotation_matrix)
-    print(rotation_vector)
+    rotation_matrix = feature_vector[:,[2,0,-1]]
+    print(feature_vector)
+    print(rotation_matrix)
 
 
 if __name__ == "__main__":

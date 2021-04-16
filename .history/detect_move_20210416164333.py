@@ -129,7 +129,7 @@ def detect_objects_in_image(image, model):
     save_image = image[..., ::-1]
     cv2.imwrite('/home/jiang/Grasp/result/res' + str(__k) + '.jpg', save_image)
     __k += 1
-
+    
     # RESULT_SAVE_PATH = "/home/jiang/Grasp/result"
     # # !!! change the function to choose which object to show in the results
     # save_path_name = os.path.join(RESULT_SAVE_PATH, 'img.jpg')
@@ -157,7 +157,6 @@ def detect_objects_in_image(image, model):
         target_object_dict[class_names[index]] = [mask_points]
     return target_object_dict
 
-
 def line_set(item_pc, item_color):
     pca = PCA(n_components=2)
     pca.fit(item_pc)
@@ -177,7 +176,6 @@ def line_set(item_pc, item_color):
 
     return medium_point, np.array([fv1, fv2, fv3])
 
-
 def save_objects_point_cloud(total_point_cloud, color_img,
                              target_objects_dict):
     np.save('full_point_cloud_test', total_point_cloud)
@@ -196,7 +194,9 @@ def save_objects_point_cloud(total_point_cloud, color_img,
                 color_img[mask[point_index][0]][mask[point_index][1]])
         object_both = np.hstack((object_pc, object_color / 255))
         medium_point, feature_vector = line_set(object_pc, object_color)
-        object_dict[name] = [medium_point, feature_vector, object_both]
+        object_dict[name] = [
+            medium_point, feature_vector, object_both
+        ]
         np.save(name + '_pc', object_pc)
         np.save(name + '_color', object_color)
     # print(object_dict)

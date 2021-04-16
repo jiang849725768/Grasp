@@ -48,7 +48,7 @@ def line_show(item_pc, item_color):
     line_set = o3d.geometry.LineSet(points=o3d.utility.Vector3dVector(point),
                                     lines=o3d.utility.Vector2iVector(lines))
     line_set.colors = o3d.utility.Vector3dVector(colors)
-
+    
     # pcd = o3d.io.read_point_cloud('temp.txt', format='xyzrgb')
     # o3d.visualization.draw_geometries([pcd, line_set])
 

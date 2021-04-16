@@ -9,5 +9,4 @@ import numpy as np
 
 item = "croissant"
 item_pc = np.load(f"{item}_pc.npy")
-print (item_pc[:10])
-
+print (item_pc)

@@ -5,14 +5,13 @@ import open3d as o3d
 from pandas import DataFrame
 from sklearn.decomposition import PCA
 
-
+'''
 def rm2rv(R):
     theta = np.arccos((R[0][0] + R[1][1] + R[2][2] - 1) / 2)
-    K = (1 / (2 * np.sin(theta))) * np.asarray(
-        [R[2][1] - R[1][2], R[0][2] - R[2][0], R[1][0] - R[0][1]])
+    K = (1 / (2 * np.sin(theta))) * np.asarray([R[2][1] - R[1][2], R[0][2] - R[2][0], R[1][0] - R[0][1]])
     r = theta * K
     return r
-
+'''
 
 def line_show(item_pc, item_color):
     pca = PCA(n_components=2)
@@ -24,7 +23,7 @@ def line_show(item_pc, item_color):
     feature_vector = pca.components_
 
     fv1 = np.array(feature_vector[0])
-    fv2 = -np.array(feature_vector[1])
+    fv2 = np.array(feature_vector[1])
     fv3 = np.cross(fv1, fv2)
 
     print(fv1.dot(fv2.T))
@@ -48,11 +47,11 @@ def line_show(item_pc, item_color):
     line_set = o3d.geometry.LineSet(points=o3d.utility.Vector3dVector(point),
                                     lines=o3d.utility.Vector2iVector(lines))
     line_set.colors = o3d.utility.Vector3dVector(colors)
+    pcd = o3d.io.read_point_cloud('temp.txt', format='xyzrgb')
+    
+    o3d.visualization.draw_geometries([pcd, line_set])
 
-    # pcd = o3d.io.read_point_cloud('temp.txt', format='xyzrgb')
-    # o3d.visualization.draw_geometries([pcd, line_set])
-
-    return medium_point, np.array([fv1, fv2, fv3])
+    return medium_point, [fv1, fv2, fv3]
 
 
 def main():
@@ -67,10 +66,7 @@ def main():
     item_pc = np.hstack((item_pc, add_line))
     new_item_pc = np.delete(((tf_matrix.dot(item_pc.T)).T), 3, axis=1)
 
-    medium_point, feature_vector = line_show(new_item_pc, item_color)
-    rotation_matrix = feature_vector[[2, 0, 1], :]
-    rotation_vector = rm2rv(rotation_matrix)
-    print(rotation_vector)
+    line_show(new_item_pc, item_color)
 
 
 if __name__ == "__main__":

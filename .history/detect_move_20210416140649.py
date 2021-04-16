@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import random
 import pyrealsense2 as rs
 import numpy as np
@@ -6,15 +9,11 @@ import time
 import matplotlib.pyplot as plt
 import colorsys
 from pandas import DataFrame
-# import open3d as o3d
+import open3d as o3d
 
 import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
 from sklearn.decomposition import PCA
-
-import os
-import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -86,9 +85,7 @@ def MaskRCNN():
 
     return model
 
-
 __k = 0
-
 
 def detect_objects_in_image(image, model):
     # # choose your color
@@ -102,6 +99,8 @@ def detect_objects_in_image(image, model):
 
     # Import Mask RCNN
     # sys.path.append(ROOT_DIR)  # To find local version of the library
+
+    from mrcnn import visualize
 
     class_names = [
         'BG', "red_pepper", 'green_pepper', "carrot", "turnip", "eggplant",
@@ -129,11 +128,10 @@ def detect_objects_in_image(image, model):
     save_image = image[..., ::-1]
     cv2.imwrite('/home/jiang/Grasp/result/res' + str(__k) + '.jpg', save_image)
     __k += 1
+    RESULT_SAVE_PATH = "/home/jiang/Grasp/result"
+    # !!! change the function to choose which object to show in the results
+    save_path_name = os.path.join(RESULT_SAVE_PATH, 'img.jpg')
 
-    # RESULT_SAVE_PATH = "/home/jiang/Grasp/result"
-    # # !!! change the function to choose which object to show in the results
-    # save_path_name = os.path.join(RESULT_SAVE_PATH, 'img.jpg')
-    # from mrcnn import visualize
     # 显示掩码图片
     # masked_image = visualize.display_instances(save_path_name, image, r['rois'], r['masks'], r['class_ids'],
     #                                            class_names, r['scores'], colors=COLOR)
@@ -149,33 +147,13 @@ def detect_objects_in_image(image, model):
 
         for x in range(mask.shape[0]):
             for y in range(mask.shape[1]):
-                if mask[x][y] is not False:
+                if mask[x][y] != False:
                     mask_points.append([x, y])
         mask_points = np.array(mask_points)
         if mask_points.shape[0] < 1500:
             continue
         target_object_dict[class_names[index]] = [mask_points]
     return target_object_dict
-
-
-def line_set(item_pc, item_color):
-    pca = PCA(n_components=2)
-    pca.fit(item_pc)
-
-    # 判断特征向量效果
-    # print(pca.explained_variance_ratio_)
-
-    feature_vector = pca.components_
-
-    fv1 = np.array(feature_vector[0])
-    fv2 = -np.array(feature_vector[1])
-    fv3 = np.cross(fv1, fv2)
-
-    print(fv1.dot(fv2.T))
-
-    medium_point = np.array(DataFrame(item_pc).median())
-
-    return medium_point, np.array([fv1, fv2, fv3])
 
 
 def save_objects_point_cloud(total_point_cloud, color_img,
@@ -195,14 +173,23 @@ def save_objects_point_cloud(total_point_cloud, color_img,
             object_color[point_index] = list(
                 color_img[mask[point_index][0]][mask[point_index][1]])
         object_both = np.hstack((object_pc, object_color / 255))
-        medium_point, feature_vector = line_set(object_pc, object_color)
-        object_dict[name] = [medium_point, feature_vector, object_both]
+        pca = PCA(n_components=2)
+        pca.fit(object_pc)
+        medium_points = np.array(object_pc.median())
+        eigenvectors = pca.components_
+        a = eigenvectors[0]
+        b = eigenvectors[1]
+        c = np.cross(a,b)
+        rm = np.array([c, b, -a])
+        
+            object_dict[name] = [
+            medium_points, eigenvectors[:, 0], eigenvectors[:, 1], object_both
+        ]
         np.save(name + '_pc', object_pc)
         np.save(name + '_color', object_color)
     # print(object_dict)
 
     return object_dict
-
 
 def go_to_dot(dot):
 
@@ -215,7 +202,6 @@ def go_to_dot(dot):
     move_tcp = np.hstack((new_dot[:3], current_tcp[3:]))
     print(f"move_tcp:{move_tcp}")
     grasp.move_to_tcp(move_tcp)
-
 
 def main():
     # input('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
@@ -275,7 +261,7 @@ def main():
 
         object_dict = save_objects_point_cloud(vtx, rgb_image,
                                                target_objects_dict)
-
+        
         test_object = ['carrot', 'croissant']
         for item in test_object:
             if item in object_dict:
@@ -285,7 +271,6 @@ def main():
         time.sleep(3)
 
     grasp.go_home()
-
 
 if __name__ == "__main__":
     main()
