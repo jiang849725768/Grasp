@@ -72,7 +72,7 @@ def line_show(item_pc, item_color):
 
 
 def main():
-    item = 'green_pepper'
+    item = 'croissant'
     item_pc = np.load(f'{item}_pc.npy')
     item_color = np.load(f'{item}_color.npy')
 

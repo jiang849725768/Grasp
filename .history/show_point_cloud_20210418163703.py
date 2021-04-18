@@ -72,7 +72,7 @@ def line_show(item_pc, item_color):
 
 
 def main():
-    item = 'green_pepper'
+    item = 'croissant'
     item_pc = np.load(f'{item}_pc.npy')
     item_color = np.load(f'{item}_color.npy')
 
@@ -93,9 +93,7 @@ def main():
     # medium_point = np.append(medium_point, 1.0)
     # real_point = tf_matrix.dot(medium_point)[:3]
     rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
-    tcp = np.hstack((medium_point, rotation_vector.T[0]))
-    print(tcp)
-    np.savetxt('tcp.txt', tcp)
+    print(medium_point, rotation_vector.T)
 
 
 if __name__ == "__main__":

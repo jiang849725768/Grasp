@@ -270,9 +270,9 @@ def move_up():
 
 def grasp():
     operate_gripper(100)
-    move_down()
+    # move_down()
     operate_gripper(0)
-    move_up()
+    # move_up()
     return check_grasp()
 
 
@@ -285,22 +285,29 @@ def grasp_test():
 
 def go_home():
     operate_gripper(100)
-    # move_to_tcp([0, -0.47, 0.13, 3.14165, 0., 0.])
+    move_to_home()
+
+def move_to_home():
     move_to_tcp([
-        0.21260085, -0.27910545, 0.28678575, 1.80129926, 2.24015209,
-        -0.26804505
+        0.31944593, -0.23541744, 0.18939432, -2.40983007, -1.93081744,
+        -0.08514913
     ])
 
 
 if __name__ == '__main__':
     go_home()
-    # print(get_current_pos())
+    # print(get_current_tcp())
     # current_tcp = get_current_tcp()
     # print(current_tcp)
     # move_tcp = np.hstack((current_tcp[:3], [-0.1942482,   2.81515162,  1.30441547]))
     # move_to_tcp(move_tcp)
 
-    move_to_tcp([
-        0.02430426, -0.63721155, 0.03424408, -2.47494468, 0.13009309,
-        0.04912912
-    ])
+    move_tcp = np.loadtxt('/home/jiang/Grasp/tcp.txt')
+    print(move_tcp)
+    move_to_tcp(move_tcp)
+    grasp()
+    move_to_home()
+    # move_to_tcp([
+    #     0.09665121, -0.37502396, 0.0279645, -1.60502798, -1.90657266,
+    #     -0.98949914
+    # ])
