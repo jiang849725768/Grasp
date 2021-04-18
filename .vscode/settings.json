@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "C:\\Anaconda3\\envs\\py36\\python.exe",
+    "python.pythonPath": "/home/jiang/anaconda3/envs/tfsense/bin/python",
     "python.formatting.provider": "yapf"
 }

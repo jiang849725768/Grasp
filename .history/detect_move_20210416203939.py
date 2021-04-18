@@ -1,7 +1,6 @@
 import random
 import pyrealsense2 as rs
 import numpy as np
-import cv2
 import time
 import matplotlib.pyplot as plt
 import colorsys
@@ -15,6 +14,7 @@ from sklearn.decomposition import PCA
 import os
 import sys
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+import cv2
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -158,7 +158,7 @@ def detect_objects_in_image(image, model):
     return target_object_dict
 
 
-def line_set(item_pc, item_color):
+def line_set(item_pc):
     pca = PCA(n_components=2)
     pca.fit(item_pc)
 
@@ -195,8 +195,8 @@ def save_objects_point_cloud(total_point_cloud, color_img,
             object_color[point_index] = list(
                 color_img[mask[point_index][0]][mask[point_index][1]])
         object_both = np.hstack((object_pc, object_color / 255))
-        medium_point, feature_vector = line_set(object_pc, object_color)
-        object_dict[name] = [medium_point, feature_vector, object_both]
+        medium_point, feature_vector = line_set(object_pc)
+        object_dict[name] = [medium_point, feature_vector, object_pc, object_color]
         np.save(name + '_pc', object_pc)
         np.save(name + '_color', object_color)
     # print(object_dict)
@@ -204,15 +204,25 @@ def save_objects_point_cloud(total_point_cloud, color_img,
     return object_dict
 
 
-def go_to_dot(dot):
+def go_to_dot(item_pc):
 
     move_dot = np.append(dot, 1.0)
 
-    tf = np.loadtxt('tf.txt')
     new_dot = tf.dot(move_dot)
-    current_tcp = grasp.get_current_tcp()
-    print(f"current_tcp:{current_tcp}")
-    move_tcp = np.hstack((new_dot[:3], current_tcp[3:]))
+    tf_matrix = np.loadtxt("tf.txt")
+    # print(tf_matrix)
+    add_line = np.ones([item_pc.shape[0], 1], dtype=float)
+    item_pc = np.hstack((item_pc, add_line))
+    new_item_pc = np.delete(((tf_matrix.dot(item_pc.T)).T), 3, axis=1)
+
+    medium_point, feature_vector = line_set(new_item_pc)
+    rotation_matrix = feature_vector[[2, 1, 0], :]
+    # medium_point = np.append(medium_point, 1.0)
+    # real_point = tf_matrix.dot(medium_point)[:3]
+    rotation_vector = rm2rv(rotation_matrix.T)
+    move_tcp = np.hstack((medium_point, rotation_matrix))
+    # print(f"current_tcp:{current_tcp}")
+    # move_tcp = np.hstack((new_dot[:3], current_tcp[3:]))
     print(f"move_tcp:{move_tcp}")
     grasp.move_to_tcp(move_tcp)
 
@@ -279,9 +289,8 @@ def main():
         test_object = ['carrot', 'croissant']
         for item in test_object:
             if item in object_dict:
-                item_dot = object_dict[item][0]
-                print(item_dot)
-                go_to_dot(item_dot)
+                item_pc= object_dict[item][2]
+                go_to_dot(item_pc)
         time.sleep(3)
 
     grasp.go_home()
