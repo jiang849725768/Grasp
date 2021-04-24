@@ -1,5 +1,0 @@
-# 忽略模型
-*.h5
-# 忽略numpy数组
-*.npy
-useless.py
