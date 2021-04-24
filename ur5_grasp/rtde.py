@@ -28,9 +28,9 @@ import sys
 import logging
 
 if sys.version_info[0] < 3:
-  import serialize
+    import serialize
 else:
-  import serialize
+    import serialize
 
 DEFAULT_TIMEOUT = 1.0
 
@@ -39,17 +39,18 @@ _log = logging.getLogger(LOGNAME)
 
 
 class Command:
-    RTDE_REQUEST_PROTOCOL_VERSION = 86        # ascii V
-    RTDE_GET_URCONTROL_VERSION = 118          # ascii v
-    RTDE_TEXT_MESSAGE = 77                    # ascii M
-    RTDE_DATA_PACKAGE = 85                    # ascii U
-    RTDE_CONTROL_PACKAGE_SETUP_OUTPUTS = 79   # ascii O
-    RTDE_CONTROL_PACKAGE_SETUP_INPUTS = 73    # ascii I
-    RTDE_CONTROL_PACKAGE_START = 83           # ascii S
-    RTDE_CONTROL_PACKAGE_PAUSE = 80           # ascii P
+    RTDE_REQUEST_PROTOCOL_VERSION = 86  # ascii V
+    RTDE_GET_URCONTROL_VERSION = 118  # ascii v
+    RTDE_TEXT_MESSAGE = 77  # ascii M
+    RTDE_DATA_PACKAGE = 85  # ascii U
+    RTDE_CONTROL_PACKAGE_SETUP_OUTPUTS = 79  # ascii O
+    RTDE_CONTROL_PACKAGE_SETUP_INPUTS = 73  # ascii I
+    RTDE_CONTROL_PACKAGE_START = 83  # ascii S
+    RTDE_CONTROL_PACKAGE_PAUSE = 80  # ascii P
 
 
 RTDE_PROTOCOL_VERSION = 2
+
 
 class ConnectionState:
     DISCONNECTED = 0
@@ -57,11 +58,14 @@ class ConnectionState:
     STARTED = 2
     PAUSED = 3
 
+
 class RTDEException(Exception):
     def __init__(self, msg):
         self.msg = msg
+
     def __str__(self):
         return repr(self.msg)
+
 
 class RTDE(object):
     def __init__(self, hostname, port=30004):
@@ -76,7 +80,7 @@ class RTDE(object):
         if self.__sock:
             return
 
-        self.__buf = b'' # buffer data in binary format
+        self.__buf = b''  # buffer data in binary format
         try:
             self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.__sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -103,9 +107,13 @@ class RTDE(object):
         cmd = Command.RTDE_GET_URCONTROL_VERSION
         version = self.__sendAndReceive(cmd)
         if version:
-            _log.info('Controller version: ' + str(version.major) + '.' + str(version.minor) + '.' + str(version.bugfix)+ '.' + str(version.build))
+            _log.info('Controller version: ' + str(version.major) + '.' +
+                      str(version.minor) + '.' + str(version.bugfix) + '.' +
+                      str(version.build))
             if version.major == 3 and version.minor <= 2 and version.bugfix < 19171:
-                _log.error("Please upgrade your controller to minimally version 3.2.19171")
+                _log.error(
+                    "Please upgrade your controller to minimally version 3.2.19171"
+                )
                 sys.exit()
             return version.major, version.minor, version.bugfix, version.build
         return None, None, None, None
@@ -120,10 +128,9 @@ class RTDE(object):
         cmd = Command.RTDE_CONTROL_PACKAGE_SETUP_INPUTS
         payload = bytearray(','.join(variables), 'utf-8')
         result = self.__sendAndReceive(cmd, payload)
-        if len(types)!=0 and not self.__list_equals(result.types, types):
+        if len(types) != 0 and not self.__list_equals(result.types, types):
             _log.error('Data type inconsistency for input setup: ' +
-                     str(types) + ' - ' +
-                     str(result.types))
+                       str(types) + ' - ' + str(result.types))
             return None
         result.names = variables
         self.__input_config[result.id] = result
@@ -134,10 +141,9 @@ class RTDE(object):
         payload = struct.pack('>d', frequency)
         payload = payload + (','.join(variables).encode('utf-8'))
         result = self.__sendAndReceive(cmd, payload)
-        if len(types)!=0 and not self.__list_equals(result.types, types):
+        if len(types) != 0 and not self.__list_equals(result.types, types):
             _log.error('Data type inconsistency for output setup: ' +
-                     str(types) + ' - ' +
-                     str(result.types))
+                       str(types) + ' - ' + str(result.types))
             return False
         result.names = variables
         self.__output_config = result
@@ -168,10 +174,12 @@ class RTDE(object):
             _log.error('Cannot send when RTDE synchronization is inactive')
             return
         if not input_data.recipe_id in self.__input_config:
-            _log.error('Input configuration id not found: ' + str(input_data.recipe_id))
+            _log.error('Input configuration id not found: ' +
+                       str(input_data.recipe_id))
             return
         config = self.__input_config[input_data.recipe_id]
-        return self.__sendall(Command.RTDE_DATA_PACKAGE, config.pack(input_data))
+        return self.__sendall(Command.RTDE_DATA_PACKAGE,
+                              config.pack(input_data))
 
     def receive(self, binary=False):
         if self.__output_config is None:
@@ -182,10 +190,14 @@ class RTDE(object):
             return None
         return self.__recv(Command.RTDE_DATA_PACKAGE, binary)
 
-    def send_message(self, message, source = "Python Client", type = serialize.Message.INFO_MESSAGE):
+    def send_message(self,
+                     message,
+                     source="Python Client",
+                     type=serialize.Message.INFO_MESSAGE):
         cmd = Command.RTDE_TEXT_MESSAGE
         fmt = '>B%dsB%dsB' % (len(message), len(source))
-        payload = struct.pack(fmt, len(message), message, len(source), source, type)
+        payload = struct.pack(fmt, len(message), message, len(source), source,
+                              type)
         return self.__sendall(cmd, payload)
 
     def __on_packet(self, cmd, payload):
@@ -234,11 +246,12 @@ class RTDE(object):
     def has_data(self):
         timeout = 0
         readable, _, _ = select.select([self.__sock], [], [], timeout)
-        return len(readable)!=0
+        return len(readable) != 0
 
     def __recv(self, command, binary=False):
         while self.is_connected():
-            readable, _, xlist = select.select([self.__sock], [], [self.__sock], DEFAULT_TIMEOUT)
+            readable, _, xlist = select.select([self.__sock], [],
+                                               [self.__sock], DEFAULT_TIMEOUT)
             if len(readable):
                 more = self.__sock.recv(4096)
                 if len(more) == 0:
@@ -246,7 +259,9 @@ class RTDE(object):
                     return None
                 self.__buf = self.__buf + more
 
-            if len(xlist) or len(readable) == 0: # Effectively a timeout of DEFAULT_TIMEOUT seconds
+            if len(xlist) or len(
+                    readable
+            ) == 0:  # Effectively a timeout of DEFAULT_TIMEOUT seconds
                 _log.info('lost connection with controller')
                 self.__trigger_disconnected()
                 return None
@@ -257,15 +272,18 @@ class RTDE(object):
                 packet_header = serialize.ControlHeader.unpack(self.__buf)
 
                 if len(self.__buf) >= packet_header.size:
-                    packet, self.__buf = self.__buf[3:packet_header.size], self.__buf[packet_header.size:]
+                    packet, self.__buf = self.__buf[
+                        3:packet_header.size], self.__buf[packet_header.size:]
                     data = self.__on_packet(packet_header.command, packet)
-                    if len(self.__buf) >= 3 and command == Command.RTDE_DATA_PACKAGE:
-                        next_packet_header = serialize.ControlHeader.unpack(self.__buf)
+                    if len(self.__buf
+                           ) >= 3 and command == Command.RTDE_DATA_PACKAGE:
+                        next_packet_header = serialize.ControlHeader.unpack(
+                            self.__buf)
                         if next_packet_header.command == command:
                             _log.info('skipping package(1)')
                             continue
                     if packet_header.command == command:
-                        if(binary):
+                        if (binary):
                             return packet[1:]
 
                         return data
@@ -277,7 +295,7 @@ class RTDE(object):
 
     def __trigger_disconnected(self):
         _log.info("RTDE disconnected")
-        self.disconnect() #clean-up
+        self.disconnect()  # clean-up
 
     def __unpack_protocol_version_package(self, payload):
         if len(payload) != 1:
@@ -298,8 +316,8 @@ class RTDE(object):
             _log.error('RTDE_TEXT_MESSAGE: No payload')
             return None
         msg = serialize.Message.unpack(payload)
-        if(msg.level == serialize.Message.EXCEPTION_MESSAGE or
-           msg.level == serialize.Message.ERROR_MESSAGE):
+        if (msg.level == serialize.Message.EXCEPTION_MESSAGE
+                or msg.level == serialize.Message.ERROR_MESSAGE):
             _log.error(msg.source + ': ' + msg.message)
         elif msg.level == serialize.Message.WARNING_MESSAGE:
             _log.warning(msg.source + ': ' + msg.message)
