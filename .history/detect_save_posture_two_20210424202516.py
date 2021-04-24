@@ -3,7 +3,6 @@ import time
 import random
 import numpy as np
 import pyrealsense2 as rs
-import open3d as o3d
 from pandas import DataFrame
 
 import keras.backend.tensorflow_backend as KTF
@@ -14,8 +13,6 @@ import os
 import sys
 # 防止ros中python2的opencv干扰导入
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-sys.path.append('/home/jiang/Grasp/ur5_grasp')
-import test_main as grasp
 import cv2
 
 # import random
@@ -165,54 +162,30 @@ def detect_objects_in_image(image, model):
     return target_object_dict
 
 
-def line_set(object_pc, object_color):
+def line_set(item_pc, item_color):
     pca = PCA(n_components=2)
-    pca.fit(object_pc)
+    pca.fit(item_pc)
 
     # 判断特征向量效果
     # print(pca.explained_variance_ratio_)
 
     feature_vector = pca.components_
-    print(feature_vector)
 
-    # 取消numpy默认的科学计数法，测试表明open3d点云读取函数没法读取科学计数法的表示
-    np.set_printoptions(suppress=True)
-    fv1 = -np.array(feature_vector[0])
-    fv2 = np.array(feature_vector[1])
-    fv3 = -np.cross(fv1, fv2)
+    fv1 = np.array(feature_vector[0])
+    fv2 = -np.array(feature_vector[1])
+    fv3 = np.cross(fv1, fv2)
 
-    # print(f"模：{np.linalg.norm(fv1)}")
-    # print(fv1.dot(fv2.T))
+    print(fv1.dot(fv2.T))
 
-    medium_point = np.array(DataFrame(object_pc).median())
-    object_both = np.hstack((object_pc, object_color / 255))
-
-    np.savetxt('temp.txt', object_both)
-
-    # 在原点云中画图
-    point = [
-        medium_point, medium_point + fv1, medium_point + fv2,
-        medium_point + fv3
-    ]
-    # 第一个点为图中的坐标原点
-    lines = [[0, 1], [0, 2], [0, 3]]
-    # 由点构成线，[0, 1]代表点集中序号为0和1的点组成线，即原点和三个成分向量划线
-    colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]  # 为不同的线添加不同的颜色(RGB/255)
-    # 构造open3d中的 LineSet对象，用于主成分的显示
-    line_set = o3d.geometry.LineSet(points=o3d.utility.Vector3dVector(point),
-                                    lines=o3d.utility.Vector2iVector(lines))
-    line_set.colors = o3d.utility.Vector3dVector(colors)
-
-    pcd = o3d.io.read_point_cloud('temp.txt', format='xyzrgb')
-    o3d.visualization.draw_geometries([pcd, line_set])
+    medium_point = np.array(DataFrame(item_pc).median())
 
     return medium_point, np.array([fv1, fv2, fv3])
 
 
 def save_objects_point_cloud(total_point_cloud, color_img,
-                             target_objects_dict):
-    np.save('full_point_cloud_test', total_point_cloud)
-    np.save('full_color', color_img)
+                             target_objects_dict, camera_num):
+    # np.save('full_point_cloud_test', total_point_cloud)
+    # np.save('full_color', color_img)
     object_dict = {}
     for name, value in target_objects_dict.items():
         mask = value[-1]
@@ -226,7 +199,7 @@ def save_objects_point_cloud(total_point_cloud, color_img,
             object_color[point_index] = list(
                 color_img[mask[point_index][0]][mask[point_index][1]])
         # object_both = np.hstack((object_pc, object_color / 255))
-        tf_matrix = np.loadtxt("tf.txt")
+        tf_matrix = np.loadtxt(f"tf_{camera_num+1}.txt")
         print(tf_matrix)
         add_line = np.ones([object_pc.shape[0], 1], dtype=float)
         object_pc_a = np.hstack((object_pc, add_line))
@@ -243,7 +216,7 @@ def save_objects_point_cloud(total_point_cloud, color_img,
         tcp = np.hstack((medium_point, rotation_vector.T[0]))
         print(tcp)
 
-        object_dict[name] = [medium_point, feature_vector, tcp]
+        object_dict[name] = [object_pc, object_color]
         np.save(name + '_pc', object_pc)
         np.save(name + '_color', object_color)
     print(object_dict)
@@ -251,65 +224,62 @@ def save_objects_point_cloud(total_point_cloud, color_img,
     return object_dict
 
 
-def camera_detect(model):
-    # Set the Camera
-    # Configure depth and color streams
-    pipeline = rs.pipeline()
-    config = rs.config()
-    config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 15)
-    config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 15)
-    # Start streaming
-    pipeline.start(config)
+def camera_detect(model, serials):
+    object_dicts = []
+    for camera_num, serial in enumerate(serials):
+        # Set the Camera
+        # Configure depth and color streams
+        pipeline = rs.pipeline()
+        config = rs.config()
+        config.enable_device(serial)
+        config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 15)
+        config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 15)
+        # Start streaming
+        pipeline.start(config)
 
-    align = rs.align(rs.stream.color)
-    pc = rs.pointcloud()
+        align = rs.align(rs.stream.color)
+        pc = rs.pointcloud()
 
-    for i in range(20):
-        # print('Camera heating! Wait for a second!')
-        # Wait for a coherent pair of frames: depth and color
-        frames = pipeline.wait_for_frames()
-        frames = align.process(frames)
-        depth = frames.get_depth_frame()
-        color = frames.get_color_frame()
-    print('Camera heating over.')
+        for i in range(20):
+            # print('Camera heating! Wait for a second!')
+            # Wait for a coherent pair of frames: depth and color
+            frames = pipeline.wait_for_frames()
+            frames = align.process(frames)
+            depth = frames.get_depth_frame()
+            color = frames.get_color_frame()
+        print('Camera heating over.')
 
-    for i in range(1):
-        print(f'----------第{i+1}张照片-----------')
-        frames = pipeline.wait_for_frames()
-        frames = align.process(frames)
+        for i in range(1):
+            print(f'----------第{i+1}张照片-----------')
+            frames = pipeline.wait_for_frames()
+            frames = align.process(frames)
 
-        depth = frames.get_depth_frame()
-        color = frames.get_color_frame()
+            depth = frames.get_depth_frame()
+            color = frames.get_color_frame()
 
-        img_color = np.asanyarray(color.get_data())
-        # img_depth = np.asanyarray(depth.get_data())
-        pc.map_to(color)
-        points = pc.calculate(depth)
-        vtx = np.asanyarray(points.get_vertices())
-        vtx = np.reshape(vtx, (720, 1280, -1))
+            img_color = np.asanyarray(color.get_data())
+            # img_depth = np.asanyarray(depth.get_data())
+            pc.map_to(color)
+            points = pc.calculate(depth)
+            vtx = np.asanyarray(points.get_vertices())
+            vtx = np.reshape(vtx, (720, 1280, -1))
 
-        # get 3d point cloud (masked)
-        frames = pipeline.wait_for_frames()
-        color_frame = frames.get_color_frame()
-        rgb_image = np.asanyarray(color_frame.get_data())
-        rgb_image[:, :, [0, 2]] = rgb_image[:, :, [2, 0]]
-        # print(rgb_image.shape)
-        # plt.imshow(rgb_image)
-        # plt.pause(1)  # pause 1 second
-        # plt.clf()
-        target_objects_dict = detect_objects_in_image(img_color, model)
+            # get 3d point cloud (masked)
+            frames = pipeline.wait_for_frames()
+            color_frame = frames.get_color_frame()
+            rgb_image = np.asanyarray(color_frame.get_data())
+            rgb_image[:, :, [0, 2]] = rgb_image[:, :, [2, 0]]
+            # print(rgb_image.shape)
+            # plt.imshow(rgb_image)
+            # plt.pause(1)  # pause 1 second
+            # plt.clf()
+            target_objects_dict = detect_objects_in_image(img_color, model)
 
-        object_dict = save_objects_point_cloud(vtx, rgb_image,
-                                               target_objects_dict)
+            object_dict = save_objects_point_cloud(vtx, rgb_image, target_objects_dict, camera_num)
+            object_dicts.append(object_dict)
+        # print(points[:3])
 
-    return object_dict
-
-
-def object_grasp(tcp):
-    print(tcp)
-    grasp.move_to_tcp(tcp)
-    grasp.grasp()
-    grasp.move_to_home()
+    return object_dicts
 
 
 def main():
@@ -317,11 +287,16 @@ def main():
     # Load model
     model = MaskRCNN()
 
-    object_dict = camera_detect(model)
-    item = 'croissant'
-    if item in object_dict.keys():
-        tcp = object_dict[item][-1]
-        object_grasp(tcp)
+    ctx = rs.context()
+
+    # 通过程序去获取已连接摄像头序列号
+    serial1 = ctx.devices[0].get_info(rs.camera_info.serial_number)
+    serial2 = ctx.devices[1].get_info(rs.camera_info.serial_number)
+    print(serial1, serial2)
+
+    serials = [serial1, serial2]
+
+    object_dicts = camera_detect(model, serials)
 
 
 if __name__ == "__main__":
