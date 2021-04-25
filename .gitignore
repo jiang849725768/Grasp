@@ -3,5 +3,6 @@
 # 忽略numpy数组
 *.npy
 useless.py
+del.sh
 /.vscode/
 /.history/
