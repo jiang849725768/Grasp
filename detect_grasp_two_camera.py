@@ -92,7 +92,7 @@ def MaskRCNN():
 __k = 0
 
 
-def detect_objects_in_image(image, model):
+def detect_items_in_image(image, model):
     # # choose your color
 
     hsv = [(50 / 81, 1, 1) for i in range(81)]
@@ -142,7 +142,7 @@ def detect_objects_in_image(image, model):
                                 colors=COLOR)
 
     print(r['masks'].shape)
-    target_object_dict = {}
+    target_item_dict = {}
     for score, index, cood, index_i in zip(r['scores'],
                                            r['class_ids'], r['rois'],
                                            range(len(r['class_ids']))):
@@ -157,46 +157,44 @@ def detect_objects_in_image(image, model):
         mask_points = np.array(mask_points)
         if mask_points.shape[0] < 1500:
             continue
-        target_object_dict[class_names[index]] = [mask_points]
+        target_item_dict[class_names[index]] = [mask_points]
 
-    return target_object_dict
+    return target_item_dict
 
 
-def save_objects_point_cloud(total_point_cloud, color_img, target_objects_dict,
-                             camera_num):
+def save_items_point_cloud(total_point_cloud, color_img, target_items_dict,
+                           camera_num):
     # np.save('full_point_cloud_test', total_point_cloud)
     # np.save('full_color', color_img)
-    object_dict = {}
-    for name, value in target_objects_dict.items():
+    item_dict = {}
+    for name, value in target_items_dict.items():
         mask = value[-1]
-        object_pc = np.zeros((mask.shape[0], 3), dtype=float)
-        object_color = np.zeros((mask.shape[0], 3), dtype=np.uint8)
+        item_pc = np.zeros((mask.shape[0], 3), dtype=float)
+        item_color = np.zeros((mask.shape[0], 3), dtype=np.uint8)
         for point_index in range(mask.shape[0]):
-            object_pc[point_index] = list(total_point_cloud[
-                mask[point_index][0]][mask[point_index][1]][0])
-            # print(object_pc[point_index])
+            item_pc[point_index] = list(total_point_cloud[mask[point_index][0]]
+                                        [mask[point_index][1]][0])
+            # print(item_pc[point_index])
             # input('>>>>>>>>>>>>>>>>>>>>>>>>>')
-            object_color[point_index] = list(
+            item_color[point_index] = list(
                 color_img[mask[point_index][0]][mask[point_index][1]])
-        # object_both = np.hstack((object_pc, object_color / 255))
+        # item_both = np.hstack((item_pc, item_color / 255))
         tf_matrix = np.loadtxt(f"tf_{camera_num+1}.txt")
         print(tf_matrix)
-        add_line = np.ones([object_pc.shape[0], 1], dtype=float)
-        object_pc_a = np.hstack((object_pc, add_line))
-        new_object_pc = np.delete(((tf_matrix.dot(object_pc_a.T)).T),
-                                  3,
-                                  axis=1)
+        add_line = np.ones([item_pc.shape[0], 1], dtype=float)
+        item_pc_a = np.hstack((item_pc, add_line))
+        new_item_pc = np.delete(((tf_matrix.dot(item_pc_a.T)).T), 3, axis=1)
 
-        object_dict[name] = [new_object_pc, object_color]
-        # np.save(name + '_pc', object_pc)
-        # np.save(name + '_color', object_color)
-    print(object_dict)
+        item_dict[name] = [new_item_pc, item_color]
+        # np.save(name + '_pc', item_pc)
+        # np.save(name + '_color', item_color)
+    print(item_dict)
 
-    return object_dict
+    return item_dict
 
 
 def camera_detect(model, serials):
-    object_dicts = []
+    item_dicts = []
     for camera_num, serial in enumerate(serials):
         # Set the Camera
         # Configure depth and color streams
@@ -211,14 +209,14 @@ def camera_detect(model, serials):
         align = rs.align(rs.stream.color)
         pc = rs.pointcloud()
 
-        for i in range(20):
-            # print('Camera heating! Wait for a second!')
-            # Wait for a coherent pair of frames: depth and color
-            frames = pipeline.wait_for_frames()
-            frames = align.process(frames)
-            depth = frames.get_depth_frame()
-            color = frames.get_color_frame()
-        print('Camera heating over.')
+        # for i in range(20):
+        #     # print('Camera heating! Wait for a second!')
+        #     # Wait for a coherent pair of frames: depth and color
+        #     frames = pipeline.wait_for_frames()
+        #     frames = align.process(frames)
+        #     depth = frames.get_depth_frame()
+        #     color = frames.get_color_frame()
+        # print('Camera heating over.')
 
         for i in range(1):
             print(f'----------第{i+1}张照片-----------')
@@ -244,15 +242,14 @@ def camera_detect(model, serials):
             # plt.imshow(rgb_image)
             # plt.pause(1)  # pause 1 second
             # plt.clf()
-            target_objects_dict = detect_objects_in_image(img_color, model)
+            target_items_dict = detect_items_in_image(img_color, model)
 
-            object_dict = save_objects_point_cloud(vtx, rgb_image,
-                                                   target_objects_dict,
-                                                   camera_num)
-            object_dicts.append(object_dict)
+            item_dict = save_items_point_cloud(vtx, rgb_image,
+                                               target_items_dict, camera_num)
+            item_dicts.append(item_dict)
         # print(points[:3])
 
-    return object_dicts
+    return item_dicts[0], item_dicts[1]
 
 
 def get_tcp(item_pc, item_color):
@@ -323,17 +320,11 @@ def main():
     serial2 = ctx.devices[1].get_info(rs.camera_info.serial_number)
     print(serial1, serial2)
 
-    serials = [serial1, serial2]
-
     item = 'banana'
-    item_pc_add = []
-    item_color_add = []
-    item_dicts = camera_detect(model, serials)
-    item_pc_add = np.append(item_dicts[0][item][0],
-                            item_dicts[1][item][0],
-                            axis=0)
-    item_color_add = np.append(item_dicts[0][item][1],
-                               item_dicts[1][item][1],
+    items_cam1, items_cam2 = camera_detect(model, [serial1, serial2])
+    item_pc_add = np.append(items_cam1[item][0], items_cam2[item][0], axis=0)
+    item_color_add = np.append(items_cam1[item][1],
+                               items_cam2[item][1],
                                axis=0)
     if item_pc_add.any():
         get_tcp(item_pc_add, item_color_add)

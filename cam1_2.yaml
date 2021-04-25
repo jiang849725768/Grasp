@@ -1,0 +1,11 @@
+eye_on_hand: false
+robot_base_frame: base
+tracking_base_frame: camera_color_frame
+transformation:
+  qw: 0.16964039458933963
+  qx: -0.3826418292529256
+  qy: 0.8199848395893102
+  qz: -0.39042570339725463
+  x: -0.32306115396159757
+  y: -0.26372969317138756
+  z: 0.49268829551837723

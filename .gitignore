@@ -3,5 +3,5 @@
 # 忽略numpy数组
 *.npy
 useless.py
-.vscode
-.history
+/.vscode/
+/.history/
