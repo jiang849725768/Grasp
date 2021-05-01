@@ -11,20 +11,17 @@ import sys
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 
-
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.engine import default_argument_parser, default_setup, launch, DefaultPredictor
 from detectron2.utils.visualizer import Visualizer
 
 # 引入以下注释
-from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.data.datasets.coco import load_coco_json
+from detectron2.data import MetadataCatalog
 
 from detectron2.utils.visualizer import ColorMode
 from matplotlib import pyplot as plt
-
-
+from sklearn.decomposition import PCA
 
 # import random
 # import matplotlib.pyplot as plt
@@ -32,12 +29,39 @@ from matplotlib import pyplot as plt
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.6
-session = tf.Session(config=config)
-KTF.set_session(session)
-
 ROOT_DIR = os.path.abspath("/home/jiang/Grasp")
+
+CLASS_NAMES = [
+    "BG", "red_pepper", 'green_pepper', "carrot", "turnip", "eggplant",
+    "baozi", "croissant", "cupcake", "ginger", "cake", "corn", "grape",
+    "banana", "kiwi", "lemon", "pear", "apple", "carambola", "train",
+    "detergent", "plate_w", "plate_g", "paper_box", "plastic_box", "cup",
+    "mouse", "hand", "watermelon"
+]
+
+
+def setup(args):
+    """
+    Create configs and perform basic setups.
+    """
+    cfg = get_cfg()
+    # args.config_file = "../configs/COCO-Detection/retinanet_R_50_FPN_3x.yaml"
+    cfg.merge_from_file(
+        model_zoo.get_config_file(
+            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+    )  # 从config file 覆盖配置
+    # cfg.merge_from_list(args.opts)  # 从CLI参数 覆盖配置
+
+    # cfg.INPUT.MIN_SIZE_TRAIN_SAMPLING = 'range'
+    # # 本句一定要看下注释！！！！！！！！
+    cfg.MODEL.RETINANET.NUM_CLASSES = 28
+    # # 类别数+1（因为有background，也就是你的 cate id 从 1 开始，如果您的数据集Json下标从 0 开始，这个改为您对应的类别就行，不用再加背景类！！！！！）
+    # # cfg.MODEL.WEIGHTS="/home/yourstorePath/.pth"
+    cfg.MODEL.WEIGHTS = "./model_final.pth"  # 已有模型权重
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+    cfg.freeze()
+    default_setup(cfg, args)
+    return cfg
 
 
 def MaskRCNN():
@@ -219,10 +243,40 @@ def save_objects_point_cloud(total_point_cloud, color_img,
     # return object_both
 
 
-def main():
+def detect_items_in_image(img, args, item_metadata):
+    cfg = setup(args)
+    predictor = DefaultPredictor(cfg)
+    outputs = predictor(img)
+    instances = outputs["instances"].to("cpu")
+    # format is documented at
+    # https://detectron2.readthedocs.io/tutorials/models.html # model-output-format
+    v = Visualizer(
+        img[:, :, ::-1],
+        metadata=item_metadata,
+        scale=0.5,
+        instance_mode=ColorMode.IMAGE_BW
+        # remove the colors of unsegmented pixels.
+        # This option is only available for segmentation models
+    )
+    out = v.draw_instance_predictions(instances)
+    masks_arr = instances.pred_masks.numpy()
+    item_classes = instances.pred_classes.numpy()
+    if item_classes.any():
+        print(item_classes)
+    print(masks_arr.shape)
+    if masks_arr.shape[-1] == 1:
+        print("oops")
+    arr_h, arr_w, _ = np.nonzero(masks_arr)
+    print(f"arr_h:{arr_h};arr_w:{arr_w}")
+
+    plt.imshow(out.get_image())
+    plt.show()
+
+
+def main(args, item_metadata):
     # input('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
     # Load model
-    model = MaskRCNN()
+    # model = MaskRCNN()
 
     # Set the Camera
     # Configure depth and color streams
@@ -259,22 +313,43 @@ def main():
         points = pc.calculate(depth)
         vtx = np.asanyarray(points.get_vertices())
         vtx = np.reshape(vtx, (720, 1280, -1))
+        cam_cut = [[200, 720], [200, 1180]]
 
         # get 3d point cloud (masked)
         frames = pipeline.wait_for_frames()
         color_frame = frames.get_color_frame()
         rgb_image = np.asanyarray(color_frame.get_data())
         rgb_image[:, :, [0, 2]] = rgb_image[:, :, [2, 0]]
+        img_cut = img_color[cam_cut[0][0]:cam_cut[0][1],
+                            cam_cut[1][0]:cam_cut[1][1], :]
+        # rgb_image_cut = rgb_image[cam_cut[0][0]:cam_cut[0][1], cam_cut[1][0]:cam_cut[1][1], :]
+        detect_items_in_image(img_cut, args, item_metadata)
         # print(rgb_image.shape)
         # plt.imshow(rgb_image)
         # plt.pause(1)  # pause 1 second
         # plt.clf()
-        target_objects_dict = detect_objects_in_image(img_color, model)
+        # target_objects_dict = detect_objects_in_image(img_color, model)
 
-        save_objects_point_cloud(vtx, rgb_image, target_objects_dict)
+        # save_objects_point_cloud(vtx, rgb_image, target_objects_dict)
 
     # print(points[:3])
 
 
 if __name__ == "__main__":
+    args = default_argument_parser().parse_args()
+    item_metadata = MetadataCatalog.get("coco_my_train").set(
+        thing_classes=CLASS_NAMES,  # 可以选择开启，但是不能显示中文，这里需要注意，中文的话最好关闭
+        evaluator_type='coco',  # 指定评估方式
+    )
+    launch(
+        main,
+        args.num_gpus,
+        num_machines=args.num_machines,
+        machine_rank=args.machine_rank,
+        dist_url=args.dist_url,
+        args=(
+            args,
+            item_metadata,
+        ),
+    )
     main()

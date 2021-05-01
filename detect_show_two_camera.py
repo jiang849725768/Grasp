@@ -332,10 +332,8 @@ def main():
     cam2_cut = [[200, 720], [200, 1180]]
     items_cam1, items_cam2 = camera_detect(model, [serial1, serial2],
                                            [cam1_cut, cam2_cut])
-    item_pc_add = pc_add(items_cam1[item][0], items_cam2[item][0])
-    # item_pc_add = np.append(items_cam1[item][0],
-    #                            items_cam2[item][0],
-    #                            axis=0)
+    # item_pc_add = pc_add(items_cam1[item][0], items_cam2[item][0])
+    item_pc_add = np.append(items_cam1[item][0], items_cam2[item][0], axis=0)
     item_color_add = np.append(items_cam1[item][1],
                                items_cam2[item][1],
                                axis=0)
