@@ -5,26 +5,27 @@ import numpy as np
 import pyrealsense2 as rs
 from pandas import DataFrame
 
+import keras.backend.tensorflow_backend as KTF
+import tensorflow as tf
+from sklearn.decomposition import PCA
+
 import os
 import sys
 # 防止ros中python2的opencv干扰导入
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 
+# import random
+# import matplotlib.pyplot as plt
 
-from detectron2 import model_zoo
-from detectron2.config import get_cfg
-from detectron2.engine import default_argument_parser, default_setup, launch, DefaultPredictor
-from detectron2.utils.visualizer import Visualizer
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-# 引入以下注释
-from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.data.datasets.coco import load_coco_json
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.6
+session = tf.Session(config=config)
+KTF.set_session(session)
 
-from detectron2.utils.visualizer import ColorMode
-from matplotlib import pyplot as plt
-
-
+ROOT_DIR = os.path.abspath("/home/jiang/Grasp")
 
 # import random
 # import matplotlib.pyplot as plt
@@ -169,6 +170,7 @@ def detect_objects_in_image(image, model):
         if mask_points.shape[0] < 1500:
             continue
         target_object_dict[class_names[index]] = [mask_points]
+        print(f"mask_points:{mask_points.shape}")
 
     return target_object_dict
 
@@ -195,8 +197,8 @@ def line_set(item_pc, item_color):
 
 def save_objects_point_cloud(total_point_cloud, color_img,
                              target_objects_dict):
-    np.save('full_point_cloud_test', total_point_cloud)
-    np.save('full_color', color_img)
+    # np.save('full_point_cloud_test', total_point_cloud)
+    # np.save('full_color', color_img)
     object_dict = {}
     for name, value in target_objects_dict.items():
         mask = value[-1]

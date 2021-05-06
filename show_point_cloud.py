@@ -72,12 +72,12 @@ def line_show(item_pc, item_color):
 
 
 def main():
-    item = 'green_pepper'
+    item = 'croissant'
     item_pc = np.load(f'{item}_pc.npy')
     item_color = np.load(f'{item}_color.npy')
 
     # line_show(item_pc, item_color)
-    tf_matrix = np.loadtxt("tf.txt")
+    tf_matrix = np.loadtxt("tf_1.txt")
     print(tf_matrix)
     add_line = np.ones([item_pc.shape[0], 1], dtype=float)
     # medium_point, feature_vector = line_show(item_pc, item_color)

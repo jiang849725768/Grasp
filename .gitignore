@@ -7,4 +7,4 @@ del.sh
 /.vscode/
 /.history/
 /.ipynb_checkpoints/
-model_final.pth
+*.pth
