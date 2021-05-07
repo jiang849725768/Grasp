@@ -74,7 +74,9 @@ def line_set(item_pc, item_color):
 
     # 取消numpy默认的科学计数法，测试表明open3d点云读取函数没法读取科学计数法的表示
     np.set_printoptions(suppress=True)
-    fv1 = -np.array(feature_vector[0])
+    fv1 = np.array(feature_vector[0])
+    if fv1[2] > 0:
+        fv1 = -1 * fv1
     fv2 = np.array(feature_vector[1])
     fv3 = -np.cross(fv1, fv2)
 
@@ -117,20 +119,19 @@ def save_items_point_cloud(total_point_cloud, color_img, target_items_dict,
             item_color[point_index] = list(
                 color_img[mask[point_index][0]][mask[point_index][1]])
         tf_matrix = np.loadtxt(f"tf_{cam_num+1}.txt")
-        print(tf_matrix)
 
         add_line = np.ones([item_pc.shape[0], 1], dtype=float)
         item_pc_a = np.hstack((item_pc, add_line))
         new_item_pc = np.delete(((tf_matrix.dot(item_pc_a.T)).T), 3, axis=1)
         medium_point, feature_vector = line_set(new_item_pc, item_color)
         rotation_matrix = feature_vector[[2, 1, 0], :].T
-        print(rotation_matrix)
+        # print(rotation_matrix)
         # medium_point = np.append(medium_point, 1.0)
         # real_point = tf_matrix.dot(medium_point)[:3]
         rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
         tcp = np.hstack((medium_point, rotation_vector.T[0]))
         print(tcp)
-        item_dict[name] = [medium_point, feature_vector, tcp]
+        item_dict[name] = [medium_point, feature_vector, rotation_vector, tcp]
 
     print(item_dict)
 
@@ -180,7 +181,7 @@ def camera_detect(predictor, serials, item_metadata):
     items_dicts = []
 
     # 相机图片切取
-    cams_cut = [[[200, 720], [400, 1120]], [[200, 720], [200, 1180]]]
+    cams_cut = [[[300, 650], [240, 880]], [[140, 720], [90, 980]]]
 
     for camera_num, serial in enumerate(serials):
         # Set the Camera
@@ -235,10 +236,13 @@ def camera_detect(predictor, serials, item_metadata):
     return items_dicts
 
 
-def item_grasp(tcp):
+def item_grasp(tcp, vector_z):
     '''物体抓取'''
+
+    vector_z = 0.05 * vector_z
     print(tcp)
     grasp.move_to_tcp(tcp)
+    grasp.increase_move(vector_z[0], vector_z[1], vector_z[2])
     grasp.grasp()
     grasp.move_to_home()
 
@@ -259,9 +263,28 @@ def main(args, item_metadata):
     items_dicts = camera_detect(predictor, serials, item_metadata)
     items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
     item = 'croissant'
-    if item in items_cam1.keys():
-        tcp = items_cam1[item][-1]
-        item_grasp(tcp)
+    if item in items_cam1.keys() and item in items_cam2.keys():
+        medium_point = np.mean([items_cam1[item][0], items_cam2[item][0]],
+                               axis=0)
+        feature_vector = []
+        for i in range(3):
+            feature_vector.append(
+                np.mean([items_cam1[item][1][i], items_cam2[item][1][i]],
+                        axis=0))
+        print(medium_point, feature_vector)
+        rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
+        rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
+        tcp = np.hstack((medium_point, rotation_vector.T[0]))
+        # print(tcp)
+
+        item_grasp(tcp, np.array([0, 0, 0]))
+
+    # [ 0.11446287 -0.63587084  0.01617716 -1.5875306  -1.85323039 -0.52081385]
+
+    # if item in items_cam2.keys():
+    #     tcp = items_cam2[item][-1]
+    #     vector_z = items_cam2[item][1][0]
+    #     item_grasp(tcp, vector_z)
 
 
 if __name__ == "__main__":

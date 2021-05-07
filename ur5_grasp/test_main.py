@@ -58,7 +58,7 @@ def move_to_tcp(target_tcp):
         time.sleep(0.01)
 
 
-def increase_move(delta_x, delta_y, delta_z, delta_theta):
+def increase_move(delta_x, delta_y, delta_z, delta_theta=0):
     tcp = get_current_tcp()
     rpy = util.rv2rpy(tcp[3], tcp[4], tcp[5])
     rpy[2] = rpy[2] + delta_theta
