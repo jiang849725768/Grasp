@@ -239,8 +239,9 @@ def camera_detect(predictor, serials, item_metadata):
 def item_grasp(tcp, vector_z):
     '''物体抓取'''
 
-    vector_z = 0.05 * vector_z
+    vector_z = 0.01 * vector_z
     print(tcp)
+    grasp.operate_gripper(100)
     grasp.move_to_tcp(tcp)
     grasp.increase_move(vector_z[0], vector_z[1], vector_z[2])
     grasp.grasp()
@@ -260,24 +261,25 @@ def main(args, item_metadata):
         serials.append(serial_num)
         print(f"serial{i}:{serial_num}")
 
-    items_dicts = camera_detect(predictor, serials, item_metadata)
-    items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
-    item = 'croissant'
-    if item in items_cam1.keys() and item in items_cam2.keys():
-        medium_point = np.mean([items_cam1[item][0], items_cam2[item][0]],
-                               axis=0)
-        feature_vector = []
-        for i in range(3):
-            feature_vector.append(
-                np.mean([items_cam1[item][1][i], items_cam2[item][1][i]],
-                        axis=0))
-        print(medium_point, feature_vector)
-        rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
-        rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
-        tcp = np.hstack((medium_point, rotation_vector.T[0]))
-        # print(tcp)
+    target_items = ['baozi', 'detergent']
+    for item in target_items:
+        items_dicts = camera_detect(predictor, serials, item_metadata)
+        items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
+        if item in items_cam1.keys() and item in items_cam2.keys():
+            medium_point = np.mean([items_cam1[item][0], items_cam2[item][0]],
+                                   axis=0)
+            feature_vector = []
+            for i in range(3):
+                feature_vector.append(
+                    np.mean([items_cam1[item][1][i], items_cam2[item][1][i]],
+                            axis=0))
+            print(medium_point, feature_vector)
+            rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
+            rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
+            tcp = np.hstack((medium_point, rotation_vector.T[0]))
+            # print(tcp)
 
-        item_grasp(tcp, np.array([0, 0, 0]))
+            item_grasp(tcp, feature_vector[0])
 
     # [ 0.11446287 -0.63587084  0.01617716 -1.5875306  -1.85323039 -0.52081385]
 

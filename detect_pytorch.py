@@ -196,7 +196,7 @@ def main(args, item_metadata):
         points = pc.calculate(depth)
         vtx = np.asanyarray(points.get_vertices())
         vtx = np.reshape(vtx, (720, 1280, -1))
-        cam_cut = [[200, 720], [200, 1180]]
+        cam_cut = [[330, 700], [200, 980]]
 
         # get 3d point cloud (masked)
         frames = pipeline.wait_for_frames()

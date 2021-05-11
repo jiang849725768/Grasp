@@ -8,3 +8,4 @@ del.sh
 /.history/
 /.ipynb_checkpoints/
 *.pth
+test.py

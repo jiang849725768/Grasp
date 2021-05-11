@@ -1,0 +1,35 @@
+eye_on_hand: false
+robot_base_frame: base
+tracking_base_frame: camera_color_frame
+transformation:
+  qw: 0.050449186158944295
+  qx: -0.05989353700990822
+  qy: 0.8395807778649099
+  qz: -0.5375609372713905
+  x: -0.16920416063428967
+  y: 0.21375796948580036
+  z: 0.4548859857345057
+
+eye_on_hand: false
+robot_base_frame: base
+tracking_base_frame: camera_color_frame
+transformation:
+  qw: 0.050408591875659714
+  qx: -0.06839571970588947
+  qy: 0.8383968422658228
+  qz: -0.5383973758012974
+  x: -0.17723122642341899
+  y: 0.21253747681484422
+  z: 0.45346050823631057
+
+eye_on_hand: false
+robot_base_frame: base
+tracking_base_frame: camera_color_frame
+transformation:
+  qw: 0.06029308173910366
+  qx: -0.07728435091840172
+  qy: 0.8402021872944347
+  qz: -0.533340564614366
+  x: -0.2039197058398247
+  y: 0.21566640457083236
+  z: 0.4661138501569145

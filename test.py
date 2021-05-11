@@ -6,10 +6,8 @@
 
 import numpy as np
 
-a = [[1,2,3], [2,3,4]]
-b = [1,3,4]
-for i, point in enumerate(a):
-    new_point = np.array(point) + np.array(b)
-    a[i] = new_point
+a = [[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]
 
-print(a)
+b = [[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]
+
+print(np.concatenate((a, b)))
