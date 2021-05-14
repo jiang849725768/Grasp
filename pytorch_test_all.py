@@ -83,7 +83,7 @@ def pc_show(medium_point, fv1, fv2, fv3):
     o3d.visualization.draw_geometries([pcd, line_set])
 
 
-def line_set(item_pc, item_color):
+def line_set(item_pc, item_color, z_judge=True):
     pca = PCA(n_components=2)
     pca.fit(item_pc)
 
@@ -97,41 +97,38 @@ def line_set(item_pc, item_color):
     fv1 = np.array(feature_vector[0])
     fv2 = np.array(feature_vector[1])
 
-    # feature_vector
-    value_z_1 = np.abs(fv1.dot(np.array([0., 0., 1.])))
-    value_z_2 = np.abs(fv2.dot(np.array([0., 0., 1.])))
+    # 向量进取方向判断（与z轴夹角大小）
+    if z_judge:
+        value_z_1 = np.abs(fv1.dot(np.array([0., 0., 1.])))
+        value_z_2 = np.abs(fv2.dot(np.array([0., 0., 1.])))
 
-    if value_z_1 < value_z_2:
-        print("v2->v1")
-        fv1, fv2 = fv2, fv1
+        if value_z_1 < value_z_2:
+            print("v2->v1")
+            fv1, fv2 = fv2, fv1
 
     fv3 = -np.cross(fv1, fv2)
-    # value_z_3 = np.abs(fv3.dot(np.array([0., 0., 1.])))
-    # print(f"value:{value_z_3}")
-
-    # if value_z_1 < value_z_3:
-    #     print("v3->v1")
-    #     fv1, fv3 = fv3, -fv1
 
     if fv1[2] > 0:
         fv1, fv3 = -fv1, -fv3
 
-    print(f"fv1,fv2,fv3:{[fv1,fv2,fv3]}")
+    # print(f"fv1,fv2,fv3:{[fv1,fv2,fv3]}")
     # print(fv1.dot(fv2.T))
     medium_point = np.array(DataFrame(item_pc).median())
     item_both = np.hstack((item_pc, item_color))
 
     np.savetxt('temp.txt', item_both)
 
-    # pc_show(medium_point, fv1, fv2, fv3)
+    pc_show(medium_point, fv1, fv2, fv3)
 
     return medium_point, np.array([fv1, fv2, fv3]), item_both
 
 
-def save_items_point_cloud(total_point_cloud, color_img, target_items_dict,
-                           cam_num):
+def save_items_point_cloud(total_point_cloud, color_img, detect_items_dict,
+                           cam_num, target_items):
     item_dict = {}
-    for name, value in target_items_dict.items():
+    for name, value in detect_items_dict.items():
+        if name not in target_items:
+            continue
         mask = value[-1]
         item_pc = np.zeros((mask.shape[0], 3), dtype=float)
         item_color = np.zeros((mask.shape[0], 3), dtype=np.uint8)
@@ -154,9 +151,7 @@ def save_items_point_cloud(total_point_cloud, color_img, target_items_dict,
         rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
         tcp = np.hstack((medium_point, rotation_vector.T[0]))
         # print(tcp)
-        item_dict[name] = [
-            medium_point, feature_vector, item_both, tcp
-        ]
+        item_dict[name] = [medium_point, feature_vector, item_both, tcp]
 
     # print(item_dict)
 
@@ -164,7 +159,7 @@ def save_items_point_cloud(total_point_cloud, color_img, target_items_dict,
 
 
 def detect_items_in_image(img, predictor, item_metadata):
-    target_items_dict = {}
+    detect_items_dict = {}
 
     s_time = time.time()
     outputs = predictor(img)
@@ -192,29 +187,35 @@ def detect_items_in_image(img, predictor, item_metadata):
             print(item_name)
             arr_h, arr_w = np.nonzero(masks_arr[i])
             mask_points = np.array([arr_h, arr_w]).T
-            if item_name in target_items_dict.keys():
-                if mask_points.shape[0] > target_items_dict[item_name][
+            if item_name in detect_items_dict.keys():
+                if mask_points.shape[0] < detect_items_dict[item_name][
                         0].shape[0]:
-                    target_items_dict[CLASS_NAMES[item_num]] = [mask_points]
+                    detect_items_dict[CLASS_NAMES[item_num]] = [mask_points]
             else:
                 print(f"mask_points:{mask_points.shape}")
-                target_items_dict[CLASS_NAMES[item_num]] = [mask_points]
+                detect_items_dict[CLASS_NAMES[item_num]] = [mask_points]
 
     # 展示图像
     # plt.clf()
-    # res_img = out.get_image()
 
-    # plt.imshow(res_img)
-    # plt.savefig("result/0.jpg")
-    # plt.show()
+    res_img = out.get_image()
+    plt.imshow(res_img)
+    plt.savefig("result/0.jpg")
+    plt.show()
+
     # plt.pause(0.1)	# pause 0.1 second
     # input()
 
-    return target_items_dict
+    return detect_items_dict
 
 
-def camera_detect(predictor, serials, item_metadata):
+def camera_detect(predictor, serials, target_items):
     items_dicts = []
+
+    item_metadata = MetadataCatalog.get("coco_my_train").set(
+        thing_classes=CLASS_NAMES,  # 可以选择开启，但是不能显示中文，这里需要注意，中文的话最好关闭
+        evaluator_type='coco',  # 指定评估方式
+    )
 
     # 相机图片切取
     cams_cut = [[[300, 700], [220, 980]], [[100, 720], [90, 980]]]
@@ -261,10 +262,11 @@ def camera_detect(predictor, serials, item_metadata):
         img_cut = img_color[cam_cut[0][0]:cam_cut[0][1],
                             cam_cut[1][0]:cam_cut[1][1], :]
         vtx = vtx[cam_cut[0][0]:cam_cut[0][1], cam_cut[1][0]:cam_cut[1][1], :]
-        target_items_dict = detect_items_in_image(img_cut, predictor,
+        detect_items_dict = detect_items_in_image(img_cut, predictor,
                                                   item_metadata)
         items_dict = save_items_point_cloud(vtx, img_cut[:, :, [2, 1, 0]],
-                                            target_items_dict, camera_num)
+                                            detect_items_dict, camera_num,
+                                            target_items)
         items_dicts.append(items_dict)
         # print(points[:3])
 
@@ -278,17 +280,21 @@ def item_grasp(tcp, vector_z):
 
     # vector_z = 0.01 * vector_z
     # print(tcp)
+
+    # start_tcp = grasp.get_current_tcp()
+    # grasp.move_to_tcp(np.concatenate((start_tcp[:3], tcp[3:])))
+
     grasp.operate_gripper(100)
-    medium_tcp = tcp[:3] - 0.1 * vector_z
-    # grasp.move_to_tcp(np.concatenate((tcp[:2], [start_tcp[2]], tcp[3:])))
+    medium_tcp = tcp[:3] - 0.06 * vector_z
     grasp.move_to_tcp(np.concatenate((medium_tcp, tcp[3:])))
     grasp.move_to_tcp(tcp)
     # grasp.increase_move(vector_z[0], vector_z[1], vector_z[2])
     grasp.grasp()
+    grasp.move_to_tcp(np.concatenate((medium_tcp, tcp[3:])))
     grasp.move_to_home()
 
 
-def main(args, item_metadata):
+def main(args):
     # input('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
     grasp.go_home()
 
@@ -305,31 +311,29 @@ def main(args, item_metadata):
 
     # plt.ion()
     while True:
-        items_dicts = camera_detect(predictor, serials, item_metadata)
+        # 抓取物体及顺序设置
+        target_items = ['baozi', 'carrot', 'croissant', 'apple', 'pear']
+
+        items_dicts = camera_detect(predictor, serials, target_items)
         items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
-        target_items = ['baozi', 'croissant', 'corn', 'eggplant', 'carrot', 'apple']
+
         detect_item_num = len(target_items)
         for item in target_items:
             if item in items_cam1.keys() and item in items_cam2.keys():
-                # feature_vector = []
-                # print(items_cam1[item][2], items_cam2[item][2])
-                # # cam1_percent = items_cam1[item][2][0] / (
-                # #     items_cam1[item][2][0] + items_cam2[item][2][0])
-                # # cam2_percent = items_cam2[item][2][0] / (
-                # #     items_cam1[item][2][0] + items_cam2[item][2][0])
-                # # input()
-                # medium_point = cam1_percent * items_cam1[item][
-                #     0] + cam2_percent * items_cam2[item][0]
-                # for i in range(3):
-                #     feature_vector.append(
-                #         cam1_percent * items_cam1[item][1][i] +
-                #         cam2_percent * items_cam2[item][1][i])
-                # print(medium_point, feature_vector)
                 item_add = np.concatenate(
                     (items_cam1[item][2], items_cam2[item][2]))
                 medium_point, feature_vector, _ = line_set(
                     item_add[:, :3], item_add[:, 3:])
-                pc_show(medium_point, feature_vector[0], feature_vector[1], feature_vector[2])
+                value_x_1 = np.abs(feature_vector[1].dot(
+                    items_cam1[item][1][2]))
+                value_x_2 = np.abs(feature_vector[2].dot(
+                    items_cam2[item][1][2]))
+                if value_x_1 > value_x_2:
+                    print("x, y轴交换")
+                    feature_vector[1], feature_vector[2] = feature_vector[
+                        2], -feature_vector[1]
+                pc_show(medium_point, feature_vector[0], feature_vector[1],
+                        feature_vector[2])
                 rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
                 rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
                 tcp = np.hstack((medium_point, rotation_vector.T[0]))
@@ -360,18 +364,11 @@ def main(args, item_metadata):
 
 if __name__ == "__main__":
     args = default_argument_parser().parse_args()
-    item_metadata = MetadataCatalog.get("coco_my_train").set(
-        thing_classes=CLASS_NAMES,  # 可以选择开启，但是不能显示中文，这里需要注意，中文的话最好关闭
-        evaluator_type='coco',  # 指定评估方式
-    )
     launch(
         main,
         args.num_gpus,
         num_machines=args.num_machines,
         machine_rank=args.machine_rank,
         dist_url=args.dist_url,
-        args=(
-            args,
-            item_metadata,
-        ),
+        args=(args, ),
     )

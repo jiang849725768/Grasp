@@ -6,8 +6,11 @@
 
 import numpy as np
 
-a = [[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]
+# a = [[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]
 
-b = [[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]
+# b = [[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]
 
-print(np.concatenate((a, b)))
+# print(np.concatenate((a, b)))
+
+for i in range(1,3):
+    print(i)
