@@ -118,7 +118,7 @@ def line_set(item_pc, item_color, z_judge=True):
 
     np.savetxt('temp.txt', item_both)
 
-    pc_show(medium_point, fv1, fv2, fv3)
+    # pc_show(medium_point, fv1, fv2, fv3)
 
     return medium_point, np.array([fv1, fv2, fv3]), item_both
 
@@ -198,10 +198,10 @@ def detect_items_in_image(img, predictor, item_metadata):
     # 展示图像
     # plt.clf()
 
-    res_img = out.get_image()
-    plt.imshow(res_img)
-    plt.savefig("result/0.jpg")
-    plt.show()
+    # res_img = out.get_image()
+    # plt.imshow(res_img)
+    # plt.savefig("result/0.jpg")
+    # plt.show()
 
     # plt.pause(0.1)	# pause 0.1 second
     # input()
@@ -218,7 +218,7 @@ def camera_detect(predictor, serials, target_items):
     )
 
     # 相机图片切取
-    cams_cut = [[[300, 700], [220, 980]], [[100, 720], [90, 980]]]
+    cams_cut = [[[300, 720], [120, 930]], [[100, 720], [140, 940]]]
 
     for camera_num, serial in enumerate(serials):
         # Set the Camera
@@ -281,8 +281,8 @@ def item_grasp(tcp, vector_z):
     # vector_z = 0.01 * vector_z
     # print(tcp)
 
-    # start_tcp = grasp.get_current_tcp()
-    # grasp.move_to_tcp(np.concatenate((start_tcp[:3], tcp[3:])))
+    start_tcp = grasp.get_current_tcp()
+    grasp.move_to_tcp(np.concatenate((tcp[:2], start_tcp[2:])))
 
     grasp.operate_gripper(100)
     medium_tcp = tcp[:3] - 0.06 * vector_z
@@ -290,7 +290,7 @@ def item_grasp(tcp, vector_z):
     grasp.move_to_tcp(tcp)
     # grasp.increase_move(vector_z[0], vector_z[1], vector_z[2])
     grasp.grasp()
-    grasp.move_to_tcp(np.concatenate((medium_tcp, tcp[3:])))
+    grasp.move_to_tcp(np.concatenate((tcp[:2], start_tcp[2:])))
     grasp.move_to_home()
 
 
@@ -312,7 +312,7 @@ def main(args):
     # plt.ion()
     while True:
         # 抓取物体及顺序设置
-        target_items = ['baozi', 'carrot', 'croissant', 'apple', 'pear']
+        target_items = ['corn', 'eggplant', 'croissant', 'apple', 'pear']
 
         items_dicts = camera_detect(predictor, serials, target_items)
         items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
@@ -332,8 +332,11 @@ def main(args):
                     print("x, y轴交换")
                     feature_vector[1], feature_vector[2] = feature_vector[
                         2], -feature_vector[1]
-                pc_show(medium_point, feature_vector[0], feature_vector[1],
-                        feature_vector[2])
+                if feature_vector[2][0] < 0:
+                    feature_vector[1], feature_vector[2] = -feature_vector[
+                        1], -feature_vector[2]
+                # pc_show(medium_point, feature_vector[0], feature_vector[1],
+                #         feature_vector[2])
                 rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
                 rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
                 tcp = np.hstack((medium_point, rotation_vector.T[0]))

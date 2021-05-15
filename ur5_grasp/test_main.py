@@ -271,7 +271,7 @@ def move_up():
 def grasp():
     operate_gripper(100)
     # move_down()
-    operate_gripper(0)
+    operate_gripper(2)
     # move_up()
     return check_grasp()
 

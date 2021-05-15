@@ -1,47 +1,20 @@
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.4005991079723564
-  qx: -0.9046560497256034
-  qy: 0.07175140678249231
-  qz: 0.12637057415139108
-  x: 0.5704706794103946
-  y: -1.4360081330155252
-  z: 0.410755421166672
+translation: 
+  x: 0.241335582408
+  y: -1.23081509977
+  z: 0.68712417859
+rotation: 
+  x: -0.933862370922
+  y: -0.0367746647329
+  z: 0.0410580531036
+  w: 0.353359494686
 
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.3925330180243339
-  qx: -0.8997902736379002
-  qy: -0.18057009996944393
-  qz: 0.060743166071301195
-  x: 0.7532249449164439
-  y: -1.0296911389814647
-  z: 0.5118654216991828
+translation: 
+  x: 0.247353763788
+  y: -1.25953287808
+  z: 0.684643329046
+rotation: 
+  x: -0.93128585236
+  y: -0.0364772186406
+  z: 0.0397747773711
+  w: 0.36026940031
 
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.3518177997445839
-  qx: -0.9353359059456748
-  qy: -0.026585555517139828
-  qz: 0.025771827050263426
-  x: 0.28297770379475384
-  y: -1.24009486903982
-  z: 0.7146068895789162
-
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.33945206307759535
-  qx: -0.9399420276503656
-  qy: -0.02875281015571411
-  qz: 0.021320352647952952
-  x: 0.27539211073394726
-  y: -1.2185683078010998
-  z: 0.7413378787856314

@@ -1,47 +1,19 @@
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.050449186158944295
-  qx: -0.05989353700990822
-  qy: 0.8395807778649099
-  qz: -0.5375609372713905
-  x: -0.16920416063428967
-  y: 0.21375796948580036
-  z: 0.4548859857345057
+translation: 
+  x: -0.203384792318
+  y: 0.164979514649
+  z: 0.472954483679
+rotation: 
+  x: -0.0664174090615
+  y: 0.850506121404
+  z: -0.519206440442
+  w: 0.0515047321308
 
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.050408591875659714
-  qx: -0.06839571970588947
-  qy: 0.8383968422658228
-  qz: -0.5383973758012974
-  x: -0.17723122642341899
-  y: 0.21253747681484422
-  z: 0.45346050823631057
-
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.06029308173910366
-  qx: -0.07728435091840172
-  qy: 0.8402021872944347
-  qz: -0.533340564614366
-  x: -0.2039197058398247
-  y: 0.21566640457083236
-  z: 0.4661138501569145
-
-eye_on_hand: false
-robot_base_frame: base
-tracking_base_frame: camera_color_frame
-transformation:
-  qw: 0.053797056129959685
-  qx: -0.06525429032210257
-  qy: 0.8419115291230564
-  qz: -0.5329472126542981
-  x: -0.17244144233643208
-  y: 0.20348711595342955
-  z: 0.4635640878339424
+translation: 
+  x: -0.208487234676
+  y: 0.1752716679
+  z: 0.455567062499
+rotation: 
+  x: -0.0652090153464
+  y: 0.851811110703
+  z: -0.516797872229
+  w: 0.0555479546013
