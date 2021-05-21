@@ -32,7 +32,7 @@ def get_current_pos_same_with_simulation():
 
 def move_to_tcp(target_tcp):
     tool_acc = 1.2  # Safe: 0.5
-    tool_vel = 0.25  # Safe: 0.2
+    tool_vel = 0.3  # Safe: 0.2
     tool_pos_tolerance = [0.001, 0.001, 0.001, 0.05, 0.05, 0.05]
     tcp_command = "movel(p[%f,%f,%f,%f,%f,%f],a=%f,v=%f,t=0,r=0)\n" % (
         target_tcp[0], target_tcp[1], target_tcp[2], target_tcp[3],
@@ -303,13 +303,3 @@ if __name__ == '__main__':
     # print(current_tcp)
     # move_tcp = np.hstack((current_tcp[:3], [-0.1942482,   2.81515162,  1.30441547]))
     # move_to_tcp(move_tcp)
-
-    # move_tcp = np.loadtxt('/home/jiang/Grasp/tcp.txt')
-    # print(move_tcp)
-    # move_to_tcp(move_tcp)
-    # grasp()
-    # move_to_home()
-    # move_to_tcp([
-    #     0.09665121, -0.37502396, 0.0279645, -1.60502798, -1.90657266,
-    #     -0.98949914
-    # ])

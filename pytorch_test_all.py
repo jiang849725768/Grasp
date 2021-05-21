@@ -105,7 +105,6 @@ def line_set(item_pc, item_color, z_judge=True):
         if value_z_1 < value_z_2:
             print("v2->v1")
             fv1, fv2 = fv2, fv1
-
     fv3 = -np.cross(fv1, fv2)
 
     if fv1[2] > 0:
@@ -145,9 +144,6 @@ def save_items_point_cloud(total_point_cloud, color_img, detect_items_dict,
         medium_point, feature_vector, item_both = line_set(
             new_item_pc, item_color / 255)
         rotation_matrix = feature_vector[[2, 1, 0], :].T
-        # print(rotation_matrix)
-        # medium_point = np.append(medium_point, 1.0)
-        # real_point = tf_matrix.dot(medium_point)[:3]
         rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
         tcp = np.hstack((medium_point, rotation_vector.T[0]))
         # print(tcp)
@@ -196,15 +192,11 @@ def detect_items_in_image(img, predictor, item_metadata):
                 detect_items_dict[CLASS_NAMES[item_num]] = [mask_points]
 
     # 展示图像
-    # plt.clf()
 
-    # res_img = out.get_image()
-    # plt.imshow(res_img)
-    # plt.savefig("result/0.jpg")
-    # plt.show()
-
-    # plt.pause(0.1)	# pause 0.1 second
-    # input()
+    res_img = out.get_image()
+    plt.imshow(res_img)
+    plt.savefig("result/0.jpg")
+    plt.show()
 
     return detect_items_dict
 
@@ -218,7 +210,7 @@ def camera_detect(predictor, serials, target_items):
     )
 
     # 相机图片切取
-    cams_cut = [[[300, 720], [120, 930]], [[100, 720], [140, 940]]]
+    cams_cut = [[[300, 720], [260, 900]], [[100, 720], [140, 940]]]
 
     for camera_num, serial in enumerate(serials):
         # Set the Camera
@@ -280,7 +272,7 @@ def item_grasp(tcp, vector_z):
 
     # vector_z = 0.01 * vector_z
     # print(tcp)
-
+    tcp = np.concatenate((tcp[:3] - 0.005 * vector_z, tcp[3:]))
     start_tcp = grasp.get_current_tcp()
     grasp.move_to_tcp(np.concatenate((tcp[:2], start_tcp[2:])))
 
@@ -312,7 +304,10 @@ def main(args):
     # plt.ion()
     while True:
         # 抓取物体及顺序设置
-        target_items = ['corn', 'eggplant', 'croissant', 'apple', 'pear']
+        target_items = ['eggplant', 'croissant', 'apple', 'pear', 'carrot']
+        target_items = np.array(target_items)[[1, 2, 4, 3, 0]]
+        # print(target_items)
+        # input()
 
         items_dicts = camera_detect(predictor, serials, target_items)
         items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
@@ -332,25 +327,33 @@ def main(args):
                     print("x, y轴交换")
                     feature_vector[1], feature_vector[2] = feature_vector[
                         2], -feature_vector[1]
-                if feature_vector[2][0] < 0:
-                    feature_vector[1], feature_vector[2] = -feature_vector[
-                        1], -feature_vector[2]
-                # pc_show(medium_point, feature_vector[0], feature_vector[1],
-                #         feature_vector[2])
-                rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
+                if feature_vector[2][0] > 0:
+                    feature_vector[1], feature_vector[
+                        2] = -feature_vector[1], -feature_vector[2]
+                pc_show(medium_point, feature_vector[0], feature_vector[1],
+                        feature_vector[2])
+                rotation_matrix = np.array(feature_vector)[[1, 2, 0], :].T
                 rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
                 tcp = np.hstack((medium_point, rotation_vector.T[0]))
                 # print(tcp)
 
             elif item in items_cam1.keys():
                 tcp = items_cam1[item][-1]
+                tcp[1] -= 0.01
+                # tcp[5] = 0
                 feature_vector = items_cam1[item][1]
             elif item in items_cam2.keys():
                 tcp = items_cam2[item][-1]
+                tcp[1] += 0.01
+                # tcp[5] = 0
                 feature_vector = items_cam2[item][1]
             else:
                 detect_item_num -= 1
                 continue
+            if tcp[1] < -0.75:
+                detect_item_num -= 1
+                continue
+            print(f"tcp:{tcp}")
             item_grasp(tcp, feature_vector[0])
             break
 
