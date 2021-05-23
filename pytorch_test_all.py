@@ -83,32 +83,34 @@ def pc_show(medium_point, fv1, fv2, fv3):
     o3d.visualization.draw_geometries([pcd, line_set])
 
 
-def line_set(item_pc, item_color, z_judge=True):
-    pca = PCA(n_components=2)
+def line_set(item_pc, item_color):
+    pca = PCA(n_components=3)
     pca.fit(item_pc)
 
     # 判断特征向量效果
     # print(pca.explained_variance_ratio_)
 
     feature_vector = pca.components_
+    variances = pca.explained_variance_ratio_
+    print(f"variances:{variances}")
 
     # 取消numpy默认的科学计数法，测试表明open3d点云读取函数没法读取科学计数法的表示
     np.set_printoptions(suppress=True)
     fv1 = np.array(feature_vector[0])
     fv2 = np.array(feature_vector[1])
+    # fv3 = np.array(feature_vector[2])
 
     # 向量进取方向判断（与z轴夹角大小）
-    if z_judge:
-        value_z_1 = np.abs(fv1.dot(np.array([0., 0., 1.])))
-        value_z_2 = np.abs(fv2.dot(np.array([0., 0., 1.])))
-
-        if value_z_1 < value_z_2:
-            print("v2->v1")
-            fv1, fv2 = fv2, fv1
+    value_z_1 = np.abs(fv1.dot(np.array([0., 0., 1.])))
+    value_z_2 = np.abs(fv2.dot(np.array([0., 0., 1.])))
+    if value_z_1 < value_z_2:
+        print("v2->v1")
+        fv1, fv2 = fv2, fv1
     fv3 = -np.cross(fv1, fv2)
 
     if fv1[2] > 0:
         fv1, fv3 = -fv1, -fv3
+        print('z轴取反')
 
     # print(f"fv1,fv2,fv3:{[fv1,fv2,fv3]}")
     # print(fv1.dot(fv2.T))
@@ -193,10 +195,10 @@ def detect_items_in_image(img, predictor, item_metadata):
 
     # 展示图像
 
-    res_img = out.get_image()
-    plt.imshow(res_img)
-    plt.savefig("result/0.jpg")
-    plt.show()
+    # res_img = out.get_image()
+    # plt.imshow(res_img)
+    # plt.savefig("result/0.jpg")
+    # plt.show()
 
     return detect_items_dict
 
@@ -272,15 +274,16 @@ def item_grasp(tcp, vector_z):
 
     # vector_z = 0.01 * vector_z
     # print(tcp)
-    tcp = np.concatenate((tcp[:3] - 0.005 * vector_z, tcp[3:]))
+    # tcp = np.concatenate((tcp[:3] - 0.005 * vector_z, tcp[3:]))
     start_tcp = grasp.get_current_tcp()
     grasp.move_to_tcp(np.concatenate((tcp[:2], start_tcp[2:])))
+
+    # grasp.move_to_tcp(np.concatenate((tcp[:3], start_tcp[3:])))
 
     grasp.operate_gripper(100)
     medium_tcp = tcp[:3] - 0.06 * vector_z
     grasp.move_to_tcp(np.concatenate((medium_tcp, tcp[3:])))
     grasp.move_to_tcp(tcp)
-    # grasp.increase_move(vector_z[0], vector_z[1], vector_z[2])
     grasp.grasp()
     grasp.move_to_tcp(np.concatenate((tcp[:2], start_tcp[2:])))
     grasp.move_to_home()
@@ -304,15 +307,15 @@ def main(args):
     # plt.ion()
     while True:
         # 抓取物体及顺序设置
-        target_items = ['eggplant', 'croissant', 'apple', 'pear', 'carrot']
-        target_items = np.array(target_items)[[1, 2, 4, 3, 0]]
+        target_items = ['corn', 'eggplant', 'croissant', 'apple', 'pear']
+        target_items = np.array(target_items)[[0, 2, 3, 4, 1]]
         # print(target_items)
         # input()
 
         items_dicts = camera_detect(predictor, serials, target_items)
         items_cam1, items_cam2 = items_dicts[0], items_dicts[1]
+        do_grasp = False
 
-        detect_item_num = len(target_items)
         for item in target_items:
             if item in items_cam1.keys() and item in items_cam2.keys():
                 item_add = np.concatenate(
@@ -327,45 +330,50 @@ def main(args):
                     print("x, y轴交换")
                     feature_vector[1], feature_vector[2] = feature_vector[
                         2], -feature_vector[1]
+                # value_z_1 = np.abs(feature_vector[0].dot(
+                #     items_cam1[item][1][2]))
+                # value_z_3 = np.abs(feature_vector[2].dot(
+                #     items_cam2[item][1][2]))
+                # if value_z_1 < value_z_3:
+                #     print("x，z轴交换")
+                #     fv1, fv2 = fv2, fv1
                 if feature_vector[2][0] > 0:
                     feature_vector[1], feature_vector[
                         2] = -feature_vector[1], -feature_vector[2]
-                pc_show(medium_point, feature_vector[0], feature_vector[1],
-                        feature_vector[2])
-                rotation_matrix = np.array(feature_vector)[[1, 2, 0], :].T
+                # pc_show(medium_point, feature_vector[0], feature_vector[1],
+                #         feature_vector[2])
+                rotation_matrix = np.array(feature_vector)[[2, 1, 0], :].T
                 rotation_vector = cv2.Rodrigues(rotation_matrix)[0]
                 tcp = np.hstack((medium_point, rotation_vector.T[0]))
-                # print(tcp)
+                if tcp[1] < -0.75:
+                    continue
+                print(f"tcp:{tcp}")
+                item_grasp(tcp, feature_vector[0])
+                do_grasp = True
+                break
+        if do_grasp:
+            continue
 
-            elif item in items_cam1.keys():
+        for item in target_items:
+            if item in items_cam1.keys():
                 tcp = items_cam1[item][-1]
-                tcp[1] -= 0.01
-                # tcp[5] = 0
                 feature_vector = items_cam1[item][1]
             elif item in items_cam2.keys():
                 tcp = items_cam2[item][-1]
-                tcp[1] += 0.01
-                # tcp[5] = 0
                 feature_vector = items_cam2[item][1]
             else:
-                detect_item_num -= 1
                 continue
-            if tcp[1] < -0.75:
-                detect_item_num -= 1
-                continue
+            # if tcp[1] < -0.75:
+            #     detect_item_num -= 1
+            #     continue
             print(f"tcp:{tcp}")
             item_grasp(tcp, feature_vector[0])
             break
 
-        if detect_item_num == 0:
+        if not items_cam1.keys() and not items_dicts.keys():
             break
 
     # [ 0.11446287 -0.63587084  0.01617716 -1.5875306  -1.85323039 -0.52081385]
-
-    # if item in items_cam2.keys():
-    #     tcp = items_cam2[item][-1]
-    #     vector_z = items_cam2[item][1][0]
-    #     item_grasp(tcp, vector_z)
 
 
 if __name__ == "__main__":
